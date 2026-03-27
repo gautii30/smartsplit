@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartSplit</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f0f13;
+      --surface: #1a1a23;
+      --surface2: #22222e;
+      --border: #2d2d3d;
+      --text: #e8e8f0;
+      --text-muted: #7a7a9a;
+      --accent: #6c5ce7;
+      --accent-hover: #7d6ff0;
+      --green: #00b894;
+      --red: #fd79a8;
+      --yellow: #fdcb6e;
+      --radius: 10px;
+      --radius-sm: 6px;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* ---- Sidebar ---- */
+    .sidebar {
+      width: 260px;
+      min-width: 260px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    .sidebar-header {
+      padding: 20px 16px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--text);
+    }
+
+    .logo span { color: var(--accent); }
+
+    .sidebar-section {
+      padding: 14px 16px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .btn-icon {
+      background: var(--accent);
+      border: none;
+      color: #fff;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      transition: background 0.15s;
+    }
+
+    .btn-icon:hover { background: var(--accent-hover); }
+
+    .group-list { flex: 1; overflow-y: auto; padding: 4px 8px; }
+
+    .group-item {
+      padding: 10px 10px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: background 0.12s;
+      user-select: none;
+    }
+
+    .group-item:hover { background: var(--surface2); }
+    .group-item.active { background: rgba(108,92,231,0.18); }
+
+    .group-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--accent), #a29bfe);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      flex-shrink: 0;
+      color: #fff;
+    }
+
+    .group-name { font-size: 14px; font-weight: 500; flex: 1; }
+    .group-count { font-size: 11px; color: var(--text-muted); }
+
+    .group-delete {
+      opacity: 0;
+      background: none;
+      border: none;
+      color: var(--red);
+      cursor: pointer;
+      font-size: 16px;
+      padding: 2px;
+      transition: opacity 0.12s;
+    }
+
+    .group-item:hover .group-delete { opacity: 1; }
+
+    /* ---- Main area ---- */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .main-header {
+      padding: 20px 28px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .main-header-left { flex: 1; }
+
+    .group-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .members-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .member-chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 10px 4px 8px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .member-chip .chip-del {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+      padding: 0;
+      transition: color 0.12s;
+    }
+
+    .member-chip .chip-del:hover { color: var(--red); }
+
+    .btn-add-member {
+      background: none;
+      border: 1px dashed var(--border);
+      color: var(--text-muted);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: border-color 0.12s, color 0.12s;
+    }
+
+    .btn-add-member:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ---- Tabs ---- */
+    .tabs {
+      display: flex;
+      gap: 2px;
+      padding: 16px 28px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tab {
+      padding: 8px 20px;
+      border: none;
+      background: none;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color 0.12s, border-color 0.12s;
+    }
+
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* ---- Tab content ---- */
+    .tab-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 28px;
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ---- Expense input ---- */
+    .expense-input-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      margin-bottom: 20px;
+    }
+
+    .input-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge-ai {
+      background: linear-gradient(135deg, var(--accent), #a29bfe);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+    }
+
+    .nl-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .nl-input {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .nl-input:focus { border-color: var(--accent); }
+    .nl-input::placeholder { color: var(--text-muted); }
+
+    .btn-parse {
+      background: var(--accent);
+      border: none;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn-parse:hover { background: var(--accent-hover); }
+    .btn-parse:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .default-user-row {
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .default-user-row input {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 5px 10px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 13px;
+      outline: none;
+      width: 140px;
+    }
+
+    /* ---- Parsed preview ---- */
+    .preview-card {
+      background: var(--surface2);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .preview-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent);
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+    }
+
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .preview-field label {
+      display: block;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 3px;
+      font-weight: 500;
+    }
+
+    .preview-field .value {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .preview-field .value.mono {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--green);
+    }
+
+    .preview-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-confirm {
+      background: var(--green);
+      border: none;
+      color: #fff;
+      padding: 8px 20px;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    .btn-confirm:hover { opacity: 0.85; }
+
+    .btn-discard {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 8px 20px;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 13px;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .btn-discard:hover { border-color: var(--red); color: var(--red); }
+
+    /* ---- Expense list ---- */
+    .section-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .expense-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      transition: border-color 0.12s;
+    }
+
+    .expense-item:hover { border-color: var(--border); }
+
+    .expense-emoji {
+      font-size: 24px;
+      flex-shrink: 0;
+      width: 36px;
+      text-align: center;
+    }
+
+    .expense-body { flex: 1; }
+
+    .expense-desc {
+      font-size: 15px;
+      font-weight: 500;
+      margin-bottom: 3px;
+    }
+
+    .expense-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .expense-amount {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .expense-del {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 16px;
+      padding: 4px;
+      opacity: 0;
+      transition: opacity 0.12s, color 0.12s;
+    }
+
+    .expense-item:hover .expense-del { opacity: 1; }
+    .expense-del:hover { color: var(--red); }
+
+    /* ---- Settle Up ---- */
+    .settle-section { margin-bottom: 28px; }
+
+    .balance-list { margin-bottom: 6px; }
+
+    .balance-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+    }
+
+    .balance-name { font-size: 14px; font-weight: 500; }
+
+    .balance-amount {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .balance-amount.positive { color: var(--green); }
+    .balance-amount.negative { color: var(--red); }
+    .balance-amount.zero { color: var(--text-muted); }
+
+    .transaction-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .txn-from { font-weight: 600; color: var(--red); }
+    .txn-arrow { color: var(--text-muted); font-size: 18px; }
+    .txn-to { font-weight: 600; color: var(--green); }
+    .txn-amount {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      margin-left: auto;
+      color: var(--text);
+    }
+
+    /* ---- Empty states ---- */
+    .empty-state {
+      text-align: center;
+      padding: 48px 0;
+      color: var(--text-muted);
+    }
+
+    .empty-state .emoji { font-size: 36px; margin-bottom: 12px; }
+    .empty-state p { font-size: 14px; }
+
+    /* ---- Modal ---- */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      min-width: 340px;
+      max-width: 90vw;
+    }
+
+    .modal h3 { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
+
+    .modal-input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 14px;
+      outline: none;
+      margin-bottom: 14px;
+    }
+
+    .modal-input:focus { border-color: var(--accent); }
+
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+    .btn-primary {
+      background: var(--accent);
+      border: none;
+      color: #fff;
+      padding: 9px 22px;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-primary:hover { background: var(--accent-hover); }
+
+    .btn-secondary {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 9px 18px;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .btn-secondary:hover { border-color: var(--text-muted); }
+
+    /* ---- Welcome screen ---- */
+    .welcome {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 12px;
+      color: var(--text-muted);
+    }
+
+    .welcome .big-emoji { font-size: 48px; }
+    .welcome h2 { font-size: 20px; font-weight: 600; color: var(--text); }
+    .welcome p { font-size: 14px; }
+
+    /* ---- Toast ---- */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 20px;
+      font-size: 14px;
+      z-index: 999;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none;
+    }
+
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.error { border-color: var(--red); color: var(--red); }
+    .toast.success { border-color: var(--green); color: var(--green); }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+  </style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <div class="logo">Smart<span>Split</span></div>
+  </div>
+  <div class="sidebar-section">
+    Groups
+    <button class="btn-icon" id="btn-new-group" title="New Group">+</button>
+  </div>
+  <div class="group-list" id="group-list"></div>
+</aside>
+
+<!-- Main area -->
+<main class="main" id="main-area">
+  <div class="welcome" id="welcome-screen">
+    <div class="big-emoji">💸</div>
+    <h2>SmartSplit</h2>
+    <p>Select a group or create one to get started.</p>
+  </div>
+
+  <div id="group-view" style="display:none; flex:1; flex-direction:column; overflow:hidden; display:none;">
+    <div class="main-header">
+      <div class="main-header-left">
+        <div class="group-title" id="group-title"></div>
+        <div class="members-row" id="members-row"></div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="expenses">Expenses</button>
+      <button class="tab" data-tab="settle">Settle Up</button>
+    </div>
+
+    <div class="tab-content">
+      <!-- Expenses Panel -->
+      <div class="tab-panel active" id="panel-expenses">
+        <div class="expense-input-card">
+          <div class="input-label">
+            Natural Language Input
+            <span class="badge-ai">AI Powered</span>
+          </div>
+          <div class="nl-row">
+            <input
+              type="text"
+              class="nl-input"
+              id="nl-input"
+              placeholder='e.g. "Paid 1500 for pizza, split with Rahul and Priya"'
+            />
+            <button class="btn-parse" id="btn-parse">Parse</button>
+          </div>
+          <div class="default-user-row">
+            <span>"I" / "me" refers to:</span>
+            <input type="text" id="default-user-input" placeholder="Your name" />
+          </div>
+        </div>
+
+        <div class="preview-card" id="preview-card">
+          <div class="preview-title">AI Parsed Result — Please Verify</div>
+          <div class="preview-grid" id="preview-grid"></div>
+          <div class="preview-actions">
+            <button class="btn-confirm" id="btn-confirm">Confirm &amp; Add</button>
+            <button class="btn-discard" id="btn-discard">Discard</button>
+          </div>
+        </div>
+
+        <div class="section-title">Expenses</div>
+        <div id="expense-list"></div>
+      </div>
+
+      <!-- Settle Up Panel -->
+      <div class="tab-panel" id="panel-settle">
+        <div class="settle-section">
+          <div class="section-title">Balances</div>
+          <div id="balance-list" class="balance-list"></div>
+        </div>
+        <div class="settle-section">
+          <div class="section-title">Simplified Transactions</div>
+          <div id="transaction-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Create Group Modal -->
+<div class="modal-overlay" id="modal-group">
+  <div class="modal">
+    <h3>Create New Group</h3>
+    <input type="text" class="modal-input" id="new-group-name" placeholder="e.g. Goa Trip, Flat 302" />
+    <div class="modal-actions">
+      <button class="btn-secondary" id="modal-group-cancel">Cancel</button>
+      <button class="btn-primary" id="modal-group-create">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Member Modal -->
+<div class="modal-overlay" id="modal-member">
+  <div class="modal">
+    <h3>Add Member</h3>
+    <input type="text" class="modal-input" id="new-member-name" placeholder="Member name" />
+    <div class="modal-actions">
+      <button class="btn-secondary" id="modal-member-cancel">Cancel</button>
+      <button class="btn-primary" id="modal-member-add">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  const CATEGORY_EMOJI = {
+    food: '🍕', travel: '🚗', groceries: '🛒', utilities: '💡',
+    entertainment: '🎬', shopping: '🛍️', rent: '🏠', medical: '💊', general: '📌'
+  };
+
+  let state = {
+    groups: [],
+    activeGroupId: null,
+    expenses: [],
+    parsedPreview: null,
+  };
+
+  // ---- API helpers ----
+
+  async function api(method, path, body) {
+    const opts = { method, headers: {} };
+    if (body !== undefined) {
+      opts.headers['Content-Type'] = 'application/json';
+      opts.body = JSON.stringify(body);
+    }
+    const res = await fetch('/api' + path, opts);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(err.detail || res.statusText);
+    }
+    if (res.status === 204) return null;
+    return res.json();
+  }
+
+  // ---- Toast ----
+
+  let toastTimer;
+  function showToast(msg, type = '') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'toast show ' + type;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.className = 'toast'; }, 3000);
+  }
+
+  // ---- Render sidebar groups ----
+
+  function renderGroups() {
+    const list = document.getElementById('group-list');
+    if (!state.groups.length) {
+      list.innerHTML = '<div style="padding:16px 10px;font-size:13px;color:var(--text-muted)">No groups yet. Create one!</div>';
+      return;
+    }
+    list.innerHTML = state.groups.map(g => `
+      <div class="group-item ${g.id === state.activeGroupId ? 'active' : ''}" data-id="${g.id}">
+        <div class="group-avatar">${g.name[0].toUpperCase()}</div>
+        <div class="group-name">${escHtml(g.name)}</div>
+        <div class="group-count">${g.members.length}👤</div>
+        <button class="group-delete" data-id="${g.id}" title="Delete group">🗑</button>
+      </div>
+    `).join('');
+  }
+
+  // ---- Render group view ----
+
+  function renderGroupView() {
+    const group = state.groups.find(g => g.id === state.activeGroupId);
+    if (!group) return;
+
+    document.getElementById('welcome-screen').style.display = 'none';
+    const gv = document.getElementById('group-view');
+    gv.style.display = 'flex';
+    gv.style.flexDirection = 'column';
+    gv.style.flex = '1';
+    gv.style.overflow = 'hidden';
+
+    document.getElementById('group-title').textContent = group.name;
+
+    // Members row
+    const row = document.getElementById('members-row');
+    row.innerHTML = group.members.map(m => `
+      <div class="member-chip">
+        ${escHtml(m)}
+        <button class="chip-del" data-member="${escHtml(m)}" title="Remove member">×</button>
+      </div>
+    `).join('') + `<button class="btn-add-member" id="btn-add-member">+ Add member</button>`;
+
+    // Default user placeholder
+    const du = document.getElementById('default-user-input');
+    if (!du.value && group.members.length) du.placeholder = group.members[0];
+
+    renderExpenses();
+  }
+
+  // ---- Render expenses ----
+
+  function renderExpenses() {
+    const list = document.getElementById('expense-list');
+    if (!state.expenses.length) {
+      list.innerHTML = `<div class="empty-state"><div class="emoji">📭</div><p>No expenses yet. Add one above!</p></div>`;
+      return;
+    }
+    list.innerHTML = state.expenses.map(e => `
+      <div class="expense-item">
+        <div class="expense-emoji">${CATEGORY_EMOJI[e.category] || '📌'}</div>
+        <div class="expense-body">
+          <div class="expense-desc">${escHtml(e.description)}</div>
+          <div class="expense-meta">Paid by <strong>${escHtml(e.paid_by)}</strong> · Split: ${e.splits.map(s => escHtml(s.member_name)).join(', ')}</div>
+        </div>
+        <div class="expense-amount">₹${fmt(e.amount)}</div>
+        <button class="expense-del" data-id="${e.id}" title="Delete">🗑</button>
+      </div>
+    `).join('');
+  }
+
+  // ---- Render settle up ----
+
+  async function renderSettle() {
+    const balList = document.getElementById('balance-list');
+    const txnList = document.getElementById('transaction-list');
+
+    try {
+      const data = await api('GET', `/groups/${state.activeGroupId}/settle`);
+
+      if (!data.balances.length) {
+        balList.innerHTML = `<div class="empty-state"><div class="emoji">🎉</div><p>No expenses yet!</p></div>`;
+        txnList.innerHTML = '';
+        return;
+      }
+
+      balList.innerHTML = data.balances.map(b => {
+        const cls = b.balance > 0.005 ? 'positive' : b.balance < -0.005 ? 'negative' : 'zero';
+        const prefix = b.balance > 0.005 ? '+' : '';
+        return `
+          <div class="balance-item">
+            <span class="balance-name">${escHtml(b.name)}</span>
+            <span class="balance-amount ${cls}">${prefix}₹${fmt(Math.abs(b.balance))}</span>
+          </div>`;
+      }).join('');
+
+      if (!data.transactions.length) {
+        txnList.innerHTML = `<div class="empty-state"><div class="emoji">✅</div><p>All settled up!</p></div>`;
+      } else {
+        txnList.innerHTML = data.transactions.map(t => `
+          <div class="transaction-item">
+            <span class="txn-from">${escHtml(t.from)}</span>
+            <span class="txn-arrow">→</span>
+            <span class="txn-to">${escHtml(t.to)}</span>
+            <span class="txn-amount">₹${fmt(t.amount)}</span>
+          </div>
+        `).join('');
+      }
+    } catch(e) {
+      balList.innerHTML = `<div class="empty-state"><p style="color:var(--red)">${escHtml(e.message)}</p></div>`;
+    }
+  }
+
+  // ---- Load data ----
+
+  async function loadGroups() {
+    state.groups = await api('GET', '/groups');
+    renderGroups();
+  }
+
+  async function selectGroup(id) {
+    state.activeGroupId = id;
+    renderGroups();
+    state.expenses = await api('GET', `/groups/${id}/expenses`);
+    hidePreview();
+    renderGroupView();
+
+    // Reset tab to expenses
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'expenses'));
+    document.getElementById('panel-expenses').classList.add('active');
+    document.getElementById('panel-settle').classList.remove('active');
+  }
+
+  // ---- Event: tab switching ----
+
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      const panel = document.getElementById('panel-' + tab.dataset.tab);
+      panel.classList.add('active');
+      if (tab.dataset.tab === 'settle') renderSettle();
+    });
+  });
+
+  // ---- Event: group list clicks ----
+
+  document.getElementById('group-list').addEventListener('click', async e => {
+    const del = e.target.closest('.group-delete');
+    if (del) {
+      e.stopPropagation();
+      const id = parseInt(del.dataset.id);
+      if (!confirm('Delete this group and all its expenses?')) return;
+      try {
+        await api('DELETE', `/groups/${id}`);
+        if (state.activeGroupId === id) {
+          state.activeGroupId = null;
+          document.getElementById('welcome-screen').style.display = 'flex';
+          document.getElementById('group-view').style.display = 'none';
+        }
+        await loadGroups();
+        showToast('Group deleted', 'success');
+      } catch(e) { showToast(e.message, 'error'); }
+      return;
+    }
+    const item = e.target.closest('.group-item');
+    if (item) selectGroup(parseInt(item.dataset.id));
+  });
+
+  // ---- Event: create group modal ----
+
+  document.getElementById('btn-new-group').addEventListener('click', () => {
+    document.getElementById('new-group-name').value = '';
+    document.getElementById('modal-group').classList.add('open');
+    setTimeout(() => document.getElementById('new-group-name').focus(), 50);
+  });
+
+  document.getElementById('modal-group-cancel').addEventListener('click', () =>
+    document.getElementById('modal-group').classList.remove('open'));
+
+  document.getElementById('modal-group-create').addEventListener('click', createGroup);
+  document.getElementById('new-group-name').addEventListener('keydown', e => { if (e.key === 'Enter') createGroup(); });
+
+  async function createGroup() {
+    const name = document.getElementById('new-group-name').value.trim();
+    if (!name) return;
+    try {
+      const g = await api('POST', '/groups', { name });
+      document.getElementById('modal-group').classList.remove('open');
+      await loadGroups();
+      selectGroup(g.id);
+      showToast('Group created!', 'success');
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+
+  // ---- Event: add member modal ----
+
+  document.getElementById('main-area').addEventListener('click', e => {
+    if (e.target.id === 'btn-add-member') {
+      document.getElementById('new-member-name').value = '';
+      document.getElementById('modal-member').classList.add('open');
+      setTimeout(() => document.getElementById('new-member-name').focus(), 50);
+    }
+    // Remove member
+    const chip = e.target.closest('.chip-del');
+    if (chip) removeMember(chip.dataset.member);
+  });
+
+  document.getElementById('modal-member-cancel').addEventListener('click', () =>
+    document.getElementById('modal-member').classList.remove('open'));
+
+  document.getElementById('modal-member-add').addEventListener('click', addMember);
+  document.getElementById('new-member-name').addEventListener('keydown', e => { if (e.key === 'Enter') addMember(); });
+
+  async function addMember() {
+    const name = document.getElementById('new-member-name').value.trim();
+    if (!name) return;
+    try {
+      await api('POST', `/groups/${state.activeGroupId}/members`, { name });
+      document.getElementById('modal-member').classList.remove('open');
+      await loadGroups();
+      renderGroupView();
+      showToast(`${name} added!`, 'success');
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+
+  async function removeMember(name) {
+    if (!confirm(`Remove ${name} from the group?`)) return;
+    try {
+      await api('DELETE', `/groups/${state.activeGroupId}/members/${encodeURIComponent(name)}`);
+      await loadGroups();
+      renderGroupView();
+      showToast(`${name} removed`, 'success');
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+
+  // ---- Event: parse expense ----
+
+  document.getElementById('btn-parse').addEventListener('click', parseExpense);
+  document.getElementById('nl-input').addEventListener('keydown', e => { if (e.key === 'Enter') parseExpense(); });
+
+  async function parseExpense() {
+    const text = document.getElementById('nl-input').value.trim();
+    if (!text) return;
+    const group = state.groups.find(g => g.id === state.activeGroupId);
+    const defaultUser = document.getElementById('default-user-input').value.trim()
+      || (group && group.members[0]) || 'Me';
+
+    const btn = document.getElementById('btn-parse');
+    btn.disabled = true;
+    btn.textContent = 'Parsing...';
+
+    try {
+      const res = await api('POST', `/groups/${state.activeGroupId}/expenses/parse`, {
+        text, default_user: defaultUser
+      });
+      state.parsedPreview = res.parsed;
+      showPreview(res.parsed);
+    } catch(e) {
+      showToast(e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Parse';
+    }
+  }
+
+  function showPreview(parsed) {
+    const card = document.getElementById('preview-card');
+    const grid = document.getElementById('preview-grid');
+    card.style.display = 'block';
+
+    grid.innerHTML = `
+      <div class="preview-field">
+        <label>Description</label>
+        <div class="value">${escHtml(parsed.description)}</div>
+      </div>
+      <div class="preview-field">
+        <label>Amount</label>
+        <div class="value mono">₹${fmt(parsed.amount)}</div>
+      </div>
+      <div class="preview-field">
+        <label>Paid By</label>
+        <div class="value">${escHtml(parsed.paid_by)}</div>
+      </div>
+      <div class="preview-field">
+        <label>Category</label>
+        <div class="value">${CATEGORY_EMOJI[parsed.category] || '📌'} ${parsed.category}</div>
+      </div>
+      <div class="preview-field">
+        <label>Split Between (${parsed.participants.length})</label>
+        <div class="value">${parsed.participants.map(escHtml).join(', ')}</div>
+      </div>
+      <div class="preview-field">
+        <label>Each Pays</label>
+        <div class="value mono">₹${fmt(parsed.amount / parsed.participants.length)}</div>
+      </div>
+    `;
+  }
+
+  function hidePreview() {
+    document.getElementById('preview-card').style.display = 'none';
+    state.parsedPreview = null;
+  }
+
+  document.getElementById('btn-discard').addEventListener('click', () => {
+    hidePreview();
+    document.getElementById('nl-input').value = '';
+  });
+
+  document.getElementById('btn-confirm').addEventListener('click', async () => {
+    const p = state.parsedPreview;
+    if (!p) return;
+    try {
+      await api('POST', `/groups/${state.activeGroupId}/expenses/manual`, {
+        description: p.description,
+        amount: p.amount,
+        paid_by: p.paid_by,
+        participants: p.participants,
+        category: p.category,
+      });
+      state.expenses = await api('GET', `/groups/${state.activeGroupId}/expenses`);
+      hidePreview();
+      document.getElementById('nl-input').value = '';
+      renderExpenses();
+      showToast('Expense added!', 'success');
+    } catch(e) { showToast(e.message, 'error'); }
+  });
+
+  // ---- Event: delete expense ----
+
+  document.getElementById('expense-list').addEventListener('click', async e => {
+    const btn = e.target.closest('.expense-del');
+    if (!btn) return;
+    if (!confirm('Delete this expense?')) return;
+    try {
+      await api('DELETE', `/groups/${state.activeGroupId}/expenses/${btn.dataset.id}`);
+      state.expenses = await api('GET', `/groups/${state.activeGroupId}/expenses`);
+      renderExpenses();
+      showToast('Expense deleted', 'success');
+    } catch(e) { showToast(e.message, 'error'); }
+  });
+
+  // ---- Close modals on overlay click ----
+
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) overlay.classList.remove('open');
+    });
+  });
+
+  // ---- Helpers ----
+
+  function fmt(n) {
+    return parseFloat(n).toFixed(2);
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // ---- Init ----
+
+  loadGroups();
+</script>
+</body>
+</html>
