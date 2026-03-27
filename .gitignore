@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.env
+smartsplit.db
+.pytest_cache/
+.claude/
