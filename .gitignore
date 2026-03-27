@@ -1,6 +1,10 @@
 __pycache__/
 *.pyc
+*.pyo
 .env
 smartsplit.db
 .pytest_cache/
-.claude/
+*.egg-info/
+dist/
+build/
+.DS_Store

@@ -13,21 +13,26 @@ def get_db():
 
 def init_db():
     conn = get_db()
-    cursor = conn.cursor()
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL,
+            created_at TEXT DEFAULT (datetime('now'))
+        );
 
-    cursor.executescript("""
         CREATE TABLE IF NOT EXISTS groups (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            created_by TEXT NOT NULL,
+            created_at TEXT DEFAULT (datetime('now'))
         );
 
         CREATE TABLE IF NOT EXISTS members (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             group_id INTEGER NOT NULL,
             name TEXT NOT NULL,
-            UNIQUE(group_id, name),
-            FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE
+            FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE,
+            UNIQUE(group_id, name)
         );
 
         CREATE TABLE IF NOT EXISTS expenses (
@@ -35,9 +40,11 @@ def init_db():
             group_id INTEGER NOT NULL,
             description TEXT NOT NULL,
             amount REAL NOT NULL,
-            category TEXT NOT NULL DEFAULT 'general',
+            category TEXT DEFAULT 'general',
             paid_by TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            created_by TEXT NOT NULL,
+            created_at TEXT DEFAULT (datetime('now')),
+            updated_at TEXT DEFAULT (datetime('now')),
             FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE
         );
 
@@ -48,7 +55,16 @@ def init_db():
             share REAL NOT NULL,
             FOREIGN KEY (expense_id) REFERENCES expenses(id) ON DELETE CASCADE
         );
-    """)
 
+        CREATE TABLE IF NOT EXISTS activity_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            group_id INTEGER NOT NULL,
+            user_name TEXT NOT NULL,
+            action TEXT NOT NULL,
+            details TEXT,
+            created_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE
+        );
+    """)
     conn.commit()
     conn.close()

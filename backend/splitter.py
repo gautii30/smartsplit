@@ -1,8 +1,11 @@
 """
 Settlement algorithm for SmartSplit.
 
-calculate_balances: computes net balance per person (positive = owed money, negative = owes money)
-simplify_debts: greedy algorithm that minimizes the number of transactions needed to settle all debts
+calculate_balances: computes net balance per person
+  Positive = this person is owed money by the group
+  Negative = this person owes money to the group
+
+simplify_debts: greedy algorithm minimizing the number of transactions
 """
 
 
@@ -12,14 +15,13 @@ def calculate_balances(expenses):
 
     Args:
         expenses: list of dicts, each with:
-            - paid_by (str): who paid
+            - paid_by (str): who paid the full amount
             - amount (float): total expense amount
-            - splits (list of dicts): each has member_name and share
+            - splits (list): each item has member_name and share
 
     Returns:
-        dict mapping member_name -> net balance
-        Positive balance means they are owed money.
-        Negative balance means they owe money.
+        dict mapping member_name -> net_balance (float)
+        Positive = owed money, Negative = owes money
     """
     balances = {}
 
@@ -27,7 +29,7 @@ def calculate_balances(expenses):
         payer = expense["paid_by"]
         amount = round(float(expense["amount"]), 2)
 
-        # Payer gets credit for the full amount they paid
+        # Payer gets credited the full amount they fronted
         balances[payer] = round(balances.get(payer, 0.0) + amount, 2)
 
         # Each participant is debited their share
@@ -41,58 +43,49 @@ def calculate_balances(expenses):
 
 def simplify_debts(balances):
     """
-    Simplify debts using a greedy algorithm that minimizes number of transactions.
+    Simplify debts using a greedy algorithm that minimizes transaction count.
 
-    Strategy:
-        1. Separate people into debtors (negative balance) and creditors (positive balance)
-        2. Sort both lists descending by absolute value
-        3. Match the largest debtor with the largest creditor
-        4. Settle as much as possible in one transaction
-        5. Repeat until all balances are zero
+    Steps:
+      1. Separate into debtors (negative balance) and creditors (positive balance)
+      2. Sort both lists by absolute value, largest first
+      3. Match the biggest debtor with the biggest creditor
+      4. Settle min(debt, credit) in one transaction
+      5. Remove the fully-settled party and repeat
 
     Args:
         balances: dict mapping member_name -> net balance
 
     Returns:
-        list of dicts: [{from: str, to: str, amount: float}, ...]
+        list of {from, to, amount} dicts
     """
-    EPSILON = 0.01  # ignore dust amounts from floating point
+    EPSILON = 0.005  # ignore floating-point dust
 
-    # Build mutable lists of (name, amount) for debtors and creditors
-    debtors = []   # people who owe money (negative balance)
-    creditors = [] # people who are owed money (positive balance)
+    debtors = []    # owe money (negative balance)
+    creditors = []  # are owed money (positive balance)
 
     for name, balance in balances.items():
-        balance = round(balance, 2)
-        if balance < -EPSILON:
-            debtors.append([name, abs(balance)])
-        elif balance > EPSILON:
-            creditors.append([name, balance])
+        b = round(balance, 2)
+        if b < -EPSILON:
+            debtors.append([name, abs(b)])
+        elif b > EPSILON:
+            creditors.append([name, b])
 
-    # Sort descending by amount
+    # Sort largest first
     debtors.sort(key=lambda x: x[1], reverse=True)
     creditors.sort(key=lambda x: x[1], reverse=True)
 
     transactions = []
 
     while debtors and creditors:
-        debtor_name, debt = debtors[0]
-        creditor_name, credit = creditors[0]
+        debtor, debt = debtors[0]
+        creditor, credit = creditors[0]
 
-        # Settle the smaller of the two amounts
         settled = round(min(debt, credit), 2)
+        transactions.append({"from": debtor, "to": creditor, "amount": settled})
 
-        transactions.append({
-            "from": debtor_name,
-            "to": creditor_name,
-            "amount": settled
-        })
-
-        # Update remaining balances
         debtors[0][1] = round(debt - settled, 2)
         creditors[0][1] = round(credit - settled, 2)
 
-        # Remove fully settled parties
         if debtors[0][1] <= EPSILON:
             debtors.pop(0)
         if creditors[0][1] <= EPSILON:

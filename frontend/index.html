@@ -1,357 +1,615 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SmartSplit</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
+    /* ── Reset ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    button { cursor: pointer; font-family: inherit; }
+    input, select, textarea { font-family: inherit; }
 
+    /* ── Design tokens ── */
     :root {
-      --bg: #0f0f13;
-      --surface: #1a1a23;
-      --surface2: #22222e;
-      --border: #2d2d3d;
-      --text: #e8e8f0;
-      --text-muted: #7a7a9a;
-      --accent: #6c5ce7;
-      --accent-hover: #7d6ff0;
-      --green: #00b894;
-      --red: #fd79a8;
-      --yellow: #fdcb6e;
-      --radius: 10px;
-      --radius-sm: 6px;
+      --bg:           #f8f9fa;
+      --bg2:          #f0f2f5;
+      --surface:      #ffffff;
+      --surface2:     #f8f9fa;
+      --border:       #e2e8f0;
+      --border2:      #cbd5e1;
+      --text:         #1a202c;
+      --text2:        #64748b;
+      --text3:        #94a3b8;
+      --accent:       #4f46e5;
+      --accent-light: #eef2ff;
+      --accent-hover: #4338ca;
+      --green:        #10b981;
+      --green-light:  #ecfdf5;
+      --red:          #ef4444;
+      --red-light:    #fef2f2;
+      --yellow:       #f59e0b;
+      --yellow-light: #fffbeb;
+      --shadow:       0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md:    0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.04);
+      --radius:       8px;
+      --radius-sm:    6px;
+      --radius-lg:    12px;
+      --sidebar-w:    260px;
+      --nav-h:        56px;
+      --transition:   0.2s ease;
     }
 
+    [data-theme="dark"] {
+      --bg:           #0f172a;
+      --bg2:          #0a0f1e;
+      --surface:      #1e293b;
+      --surface2:     #162032;
+      --border:       #334155;
+      --border2:      #475569;
+      --text:         #f1f5f9;
+      --text2:        #94a3b8;
+      --text3:        #64748b;
+      --accent:       #818cf8;
+      --accent-light: #1e1b4b;
+      --accent-hover: #6366f1;
+      --green:        #34d399;
+      --green-light:  #022c22;
+      --red:          #f87171;
+      --red-light:    #2d0c0c;
+      --yellow:       #fbbf24;
+      --yellow-light: #2d1d00;
+      --shadow:       0 1px 3px rgba(0,0,0,0.3);
+      --shadow-md:    0 4px 6px rgba(0,0,0,0.3);
+    }
+
+    /* ── Base ── */
     body {
-      font-family: 'DM Sans', sans-serif;
+      font-family: 'Inter', sans-serif;
       background: var(--bg);
       color: var(--text);
-      height: 100vh;
+      font-size: 14px;
+      line-height: 1.5;
+      transition: background var(--transition), color var(--transition);
+    }
+
+    /* ══════════════════════════════════════════════
+       LOGIN SCREEN
+    ══════════════════════════════════════════════ */
+    #login-screen {
+      min-height: 100vh;
       display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      padding: 24px;
+    }
+
+    .login-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 48px 40px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: var(--shadow-md);
+      text-align: center;
+    }
+
+    .login-logo {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
+    }
+
+    .login-tagline {
+      color: var(--text2);
+      font-size: 14px;
+      margin-bottom: 36px;
+    }
+
+    .login-label {
+      display: block;
+      text-align: left;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text2);
+      margin-bottom: 8px;
+    }
+
+    .login-input {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg2);
+      color: var(--text);
+      font-size: 15px;
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition);
+      margin-bottom: 16px;
+    }
+
+    .login-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(79,70,229,0.15);
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 12px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 15px;
+      font-weight: 600;
+      transition: background var(--transition), transform 0.1s;
+    }
+
+    .login-btn:hover { background: var(--accent-hover); }
+    .login-btn:active { transform: scale(0.99); }
+
+    /* ══════════════════════════════════════════════
+       APP SHELL
+    ══════════════════════════════════════════════ */
+    #app { display: none; height: 100vh; flex-direction: column; }
+
+    /* ── Navbar ── */
+    .navbar {
+      height: var(--nav-h);
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 20px 0 0;
+      gap: 0;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      box-shadow: var(--shadow);
+    }
+
+    .navbar-logo {
+      width: var(--sidebar-w);
+      padding: 0 20px;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.3px;
+      flex-shrink: 0;
+      border-right: 1px solid var(--border);
+      height: 100%;
+      display: flex;
+      align-items: center;
+    }
+
+    .navbar-logo span { color: var(--text); font-weight: 400; }
+
+    .navbar-center { flex: 1; }
+
+    .navbar-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .theme-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--bg2);
+      color: var(--text2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      transition: background var(--transition), color var(--transition);
+    }
+
+    .theme-btn:hover { background: var(--border); color: var(--text); }
+
+    .user-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 12px 5px 6px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .user-avatar {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ── Body ── */
+    .app-body {
+      display: flex;
+      flex: 1;
       overflow: hidden;
     }
 
-    /* ---- Sidebar ---- */
+    /* ── Sidebar ── */
     .sidebar {
-      width: 260px;
-      min-width: 260px;
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
       background: var(--surface);
       border-right: 1px solid var(--border);
       display: flex;
       flex-direction: column;
-      height: 100vh;
+      overflow: hidden;
     }
 
     .sidebar-header {
-      padding: 20px 16px 16px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .logo {
-      font-size: 20px;
-      font-weight: 700;
-      letter-spacing: -0.5px;
-      color: var(--text);
-    }
-
-    .logo span { color: var(--accent); }
-
-    .sidebar-section {
-      padding: 14px 16px 8px;
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 1px;
-      color: var(--text-muted);
-      text-transform: uppercase;
+      padding: 16px 16px 10px;
       display: flex;
       align-items: center;
       justify-content: space-between;
     }
 
-    .btn-icon {
-      background: var(--accent);
+    .sidebar-title {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--text3);
+    }
+
+    .btn-new-group {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      background: var(--accent-light);
       border: none;
-      color: #fff;
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      font-size: 16px;
-      cursor: pointer;
+      color: var(--accent);
+      font-size: 18px;
+      font-weight: 500;
       display: flex;
       align-items: center;
       justify-content: center;
+      transition: background var(--transition);
       line-height: 1;
-      transition: background 0.15s;
     }
 
-    .btn-icon:hover { background: var(--accent-hover); }
+    .btn-new-group:hover { background: var(--accent); color: #fff; }
 
-    .group-list { flex: 1; overflow-y: auto; padding: 4px 8px; }
+    .group-list { flex: 1; overflow-y: auto; padding: 4px 8px 16px; }
 
     .group-item {
-      padding: 10px 10px;
-      border-radius: var(--radius-sm);
-      cursor: pointer;
       display: flex;
       align-items: center;
       gap: 10px;
-      transition: background 0.12s;
-      user-select: none;
+      padding: 9px 10px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background var(--transition);
+      position: relative;
     }
 
-    .group-item:hover { background: var(--surface2); }
-    .group-item.active { background: rgba(108,92,231,0.18); }
+    .group-item:hover { background: var(--bg2); }
+    .group-item.active { background: var(--accent-light); }
+    .group-item.active .group-item-name { color: var(--accent); font-weight: 600; }
 
-    .group-avatar {
-      width: 32px;
-      height: 32px;
+    .group-icon {
+      width: 34px;
+      height: 34px;
       border-radius: 8px;
-      background: linear-gradient(135deg, var(--accent), #a29bfe);
+      background: linear-gradient(135deg, var(--accent), #818cf8);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 14px;
-      font-weight: 700;
       flex-shrink: 0;
-      color: #fff;
     }
 
-    .group-name { font-size: 14px; font-weight: 500; flex: 1; }
-    .group-count { font-size: 11px; color: var(--text-muted); }
+    .group-item-body { flex: 1; min-width: 0; }
+    .group-item-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .group-item-meta { font-size: 11px; color: var(--text3); margin-top: 1px; }
 
-    .group-delete {
+    .group-item-del {
       opacity: 0;
       background: none;
       border: none;
-      color: var(--red);
-      cursor: pointer;
-      font-size: 16px;
-      padding: 2px;
-      transition: opacity 0.12s;
+      color: var(--text3);
+      padding: 3px;
+      border-radius: 4px;
+      font-size: 13px;
+      transition: opacity var(--transition), color var(--transition);
+      flex-shrink: 0;
     }
 
-    .group-item:hover .group-delete { opacity: 1; }
+    .group-item:hover .group-item-del { opacity: 1; }
+    .group-item-del:hover { color: var(--red); }
 
-    /* ---- Main area ---- */
+    /* ── Main ── */
     .main {
       flex: 1;
       display: flex;
       flex-direction: column;
-      height: 100vh;
       overflow: hidden;
     }
 
-    .main-header {
-      padding: 20px 28px 16px;
-      border-bottom: 1px solid var(--border);
+    /* ── Welcome ── */
+    .welcome-state {
+      flex: 1;
       display: flex;
-      align-items: flex-start;
-      gap: 16px;
-      flex-wrap: wrap;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: var(--text2);
+      padding: 40px;
+      text-align: center;
     }
 
-    .main-header-left { flex: 1; }
+    .welcome-state .w-icon { font-size: 48px; margin-bottom: 4px; }
+    .welcome-state h2 { font-size: 20px; font-weight: 600; color: var(--text); }
+    .welcome-state p { font-size: 14px; max-width: 300px; }
 
-    .group-title {
-      font-size: 22px;
+    /* ── Group header ── */
+    .group-header {
+      padding: 18px 24px 14px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .group-header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .group-header-name {
+      font-size: 20px;
       font-weight: 700;
-      margin-bottom: 10px;
+      color: var(--text);
+      letter-spacing: -0.3px;
     }
 
     .members-row {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       flex-wrap: wrap;
     }
 
     .member-chip {
-      background: var(--surface2);
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--bg2);
       border: 1px solid var(--border);
       border-radius: 20px;
-      padding: 4px 10px 4px 8px;
+      padding: 3px 8px 3px 7px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text);
+      transition: background var(--transition);
+    }
+
+    .chip-remove {
+      background: none;
+      border: none;
+      color: var(--text3);
       font-size: 13px;
+      line-height: 1;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      transition: color var(--transition);
+    }
+
+    .chip-remove:hover { color: var(--red); }
+
+    .btn-add-member {
+      background: none;
+      border: 1px dashed var(--border2);
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text2);
+      transition: border-color var(--transition), color var(--transition);
+    }
+
+    .btn-add-member:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      gap: 0;
+    }
+
+    .tab-btn {
+      padding: 12px 18px;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text2);
+      font-size: 13px;
+      font-weight: 500;
+      transition: color var(--transition), border-color var(--transition);
+      margin-bottom: -1px;
       display: flex;
       align-items: center;
       gap: 6px;
     }
 
-    .member-chip .chip-del {
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      cursor: pointer;
-      font-size: 14px;
-      line-height: 1;
-      padding: 0;
-      transition: color 0.12s;
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .tab-badge {
+      background: var(--bg2);
+      border-radius: 10px;
+      padding: 1px 6px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text3);
     }
 
-    .member-chip .chip-del:hover { color: var(--red); }
+    .tab-btn.active .tab-badge { background: var(--accent-light); color: var(--accent); }
 
-    .btn-add-member {
-      background: none;
-      border: 1px dashed var(--border);
-      color: var(--text-muted);
-      border-radius: 20px;
-      padding: 4px 12px;
-      font-size: 13px;
-      cursor: pointer;
-      font-family: inherit;
-      transition: border-color 0.12s, color 0.12s;
-    }
-
-    .btn-add-member:hover { border-color: var(--accent); color: var(--accent); }
-
-    /* ---- Tabs ---- */
-    .tabs {
-      display: flex;
-      gap: 2px;
-      padding: 16px 28px 0;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .tab {
-      padding: 8px 20px;
-      border: none;
-      background: none;
-      color: var(--text-muted);
-      font-family: inherit;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      border-bottom: 2px solid transparent;
-      margin-bottom: -1px;
-      transition: color 0.12s, border-color 0.12s;
-    }
-
-    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-
-    /* ---- Tab content ---- */
+    /* ── Tab content ── */
     .tab-content {
       flex: 1;
       overflow-y: auto;
-      padding: 24px 28px;
+      padding: 20px 24px;
     }
 
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
 
-    /* ---- Expense input ---- */
-    .expense-input-card {
+    /* ══════════════════════════════════════════════
+       EXPENSES TAB
+    ══════════════════════════════════════════════ */
+
+    /* Input card */
+    .input-card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 18px;
-      margin-bottom: 20px;
+      padding: 16px 18px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow);
     }
 
-    .input-label {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-muted);
-      letter-spacing: 0.5px;
-      margin-bottom: 10px;
+    .input-card-header {
       display: flex;
       align-items: center;
       gap: 8px;
+      margin-bottom: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text2);
+      letter-spacing: 0.3px;
     }
 
     .badge-ai {
-      background: linear-gradient(135deg, var(--accent), #a29bfe);
+      background: linear-gradient(135deg, var(--accent), #818cf8);
       color: #fff;
       font-size: 10px;
       font-weight: 700;
       padding: 2px 8px;
-      border-radius: 20px;
+      border-radius: 10px;
       letter-spacing: 0.5px;
     }
 
     .nl-row {
       display: flex;
-      gap: 10px;
+      gap: 8px;
+      margin-bottom: 10px;
     }
 
     .nl-input {
       flex: 1;
-      background: var(--bg);
+      padding: 10px 14px;
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
-      padding: 10px 14px;
+      background: var(--bg2);
       color: var(--text);
-      font-family: inherit;
       font-size: 14px;
       outline: none;
-      transition: border-color 0.15s;
+      transition: border-color var(--transition), box-shadow var(--transition);
     }
 
-    .nl-input:focus { border-color: var(--accent); }
-    .nl-input::placeholder { color: var(--text-muted); }
+    .nl-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(79,70,229,0.1);
+    }
+
+    .nl-input::placeholder { color: var(--text3); }
 
     .btn-parse {
-      background: var(--accent);
-      border: none;
-      color: #fff;
       padding: 10px 20px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
       border-radius: var(--radius-sm);
-      font-family: inherit;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s;
       white-space: nowrap;
+      transition: background var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
     .btn-parse:hover { background: var(--accent-hover); }
-    .btn-parse:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-parse:disabled { opacity: 0.55; cursor: not-allowed; }
 
-    .default-user-row {
-      margin-top: 10px;
+    .me-row {
       display: flex;
       align-items: center;
       gap: 10px;
-      font-size: 13px;
-      color: var(--text-muted);
+      font-size: 12px;
+      color: var(--text2);
     }
 
-    .default-user-row input {
-      background: var(--bg);
+    .me-row select {
+      background: var(--bg2);
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
       padding: 5px 10px;
       color: var(--text);
-      font-family: inherit;
-      font-size: 13px;
+      font-size: 12px;
       outline: none;
-      width: 140px;
     }
 
-    /* ---- Parsed preview ---- */
+    /* Preview card */
     .preview-card {
-      background: var(--surface2);
+      display: none;
+      background: var(--surface);
       border: 1px solid var(--accent);
       border-radius: var(--radius);
       padding: 16px 18px;
-      margin-bottom: 20px;
-      display: none;
+      margin-bottom: 16px;
+      box-shadow: 0 0 0 3px rgba(79,70,229,0.08);
+    }
+
+    .preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
     }
 
     .preview-title {
       font-size: 12px;
-      font-weight: 600;
+      font-weight: 700;
       color: var(--accent);
-      letter-spacing: 0.5px;
-      margin-bottom: 12px;
       text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     .preview-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
       gap: 12px;
       margin-bottom: 14px;
     }
@@ -359,188 +617,449 @@
     .preview-field label {
       display: block;
       font-size: 11px;
-      color: var(--text-muted);
-      margin-bottom: 3px;
-      font-weight: 500;
-    }
-
-    .preview-field .value {
-      font-size: 15px;
       font-weight: 600;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
     }
 
-    .preview-field .value.mono {
+    .preview-field .pf-value {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .preview-field .pf-value.mono {
       font-family: 'JetBrains Mono', monospace;
       color: var(--green);
+      font-size: 16px;
+      font-weight: 600;
     }
 
     .preview-actions {
       display: flex;
-      gap: 10px;
+      gap: 8px;
+      align-items: center;
     }
 
     .btn-confirm {
+      padding: 8px 18px;
       background: var(--green);
-      border: none;
       color: #fff;
-      padding: 8px 20px;
+      border: none;
       border-radius: var(--radius-sm);
-      font-family: inherit;
       font-size: 13px;
       font-weight: 600;
-      cursor: pointer;
-      transition: opacity 0.15s;
+      transition: opacity var(--transition);
     }
 
-    .btn-confirm:hover { opacity: 0.85; }
+    .btn-confirm:hover { opacity: 0.88; }
 
     .btn-discard {
+      padding: 8px 14px;
       background: none;
       border: 1px solid var(--border);
-      color: var(--text-muted);
-      padding: 8px 20px;
       border-radius: var(--radius-sm);
-      font-family: inherit;
+      color: var(--text2);
       font-size: 13px;
-      cursor: pointer;
-      transition: border-color 0.15s, color 0.15s;
+      transition: border-color var(--transition), color var(--transition);
     }
 
     .btn-discard:hover { border-color: var(--red); color: var(--red); }
 
-    /* ---- Expense list ---- */
-    .section-title {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-muted);
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      margin-bottom: 12px;
+    /* Section header */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
     }
 
-    .expense-item {
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    /* Expense card */
+    .expense-card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 14px 16px;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
       display: flex;
-      align-items: center;
-      gap: 14px;
-      transition: border-color 0.12s;
+      align-items: flex-start;
+      gap: 12px;
+      box-shadow: var(--shadow);
+      transition: border-color var(--transition), box-shadow var(--transition);
+      position: relative;
     }
 
-    .expense-item:hover { border-color: var(--border); }
+    .expense-card:hover {
+      border-color: var(--border2);
+      box-shadow: var(--shadow-md);
+    }
 
     .expense-emoji {
-      font-size: 24px;
+      font-size: 22px;
       flex-shrink: 0;
-      width: 36px;
-      text-align: center;
+      width: 38px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg2);
+      border-radius: 8px;
+      border: 1px solid var(--border);
     }
 
-    .expense-body { flex: 1; }
+    .expense-body { flex: 1; min-width: 0; }
 
     .expense-desc {
-      font-size: 15px;
-      font-weight: 500;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
       margin-bottom: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .expense-meta {
       font-size: 12px;
-      color: var(--text-muted);
+      color: var(--text2);
+    }
+
+    .expense-meta .paid-by { font-weight: 600; color: var(--accent); }
+
+    .expense-time {
+      font-size: 11px;
+      color: var(--text3);
+      margin-top: 2px;
+    }
+
+    .expense-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+      flex-shrink: 0;
     }
 
     .expense-amount {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 16px;
-      font-weight: 500;
+      font-size: 15px;
+      font-weight: 600;
       color: var(--text);
     }
 
-    .expense-del {
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      cursor: pointer;
-      font-size: 16px;
-      padding: 4px;
+    .expense-actions {
+      display: flex;
+      gap: 4px;
       opacity: 0;
-      transition: opacity 0.12s, color 0.12s;
+      transition: opacity var(--transition);
     }
 
-    .expense-item:hover .expense-del { opacity: 1; }
-    .expense-del:hover { color: var(--red); }
+    .expense-card:hover .expense-actions { opacity: 1; }
 
-    /* ---- Settle Up ---- */
-    .settle-section { margin-bottom: 28px; }
+    .action-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg2);
+      color: var(--text2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      transition: all var(--transition);
+    }
 
-    .balance-list { margin-bottom: 6px; }
+    .action-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+    .action-btn.del:hover { border-color: var(--red); color: var(--red); background: var(--red-light); }
 
-    .balance-item {
+    /* Edit inline */
+    .expense-edit-form {
+      display: none;
+      background: var(--surface2);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 8px;
+      box-shadow: 0 0 0 3px rgba(79,70,229,0.08);
+    }
+
+    .edit-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .edit-field label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
+    .edit-input, .edit-select {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg2);
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+    }
+
+    .edit-input:focus, .edit-select:focus { border-color: var(--accent); }
+
+    .edit-actions { display: flex; gap: 8px; }
+
+    .btn-save-edit {
+      padding: 7px 16px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 600;
+      transition: background var(--transition);
+    }
+
+    .btn-save-edit:hover { background: var(--accent-hover); }
+
+    .btn-cancel-edit {
+      padding: 7px 12px;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text2);
+      font-size: 13px;
+    }
+
+    /* ══════════════════════════════════════════════
+       SETTLE UP TAB
+    ══════════════════════════════════════════════ */
+
+    .settle-section { margin-bottom: 24px; }
+
+    .balance-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      margin-bottom: 8px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 10px 14px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      margin-bottom: 8px;
+      box-shadow: var(--shadow);
     }
 
     .balance-name { font-size: 14px; font-weight: 500; }
+    .balance-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
 
     .balance-amount {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 14px;
+      font-size: 15px;
       font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 6px;
     }
 
-    .balance-amount.positive { color: var(--green); }
-    .balance-amount.negative { color: var(--red); }
-    .balance-amount.zero { color: var(--text-muted); }
+    .balance-amount.pos { color: var(--green); background: var(--green-light); }
+    .balance-amount.neg { color: var(--red); background: var(--red-light); }
+    .balance-amount.zero { color: var(--text3); background: var(--bg2); }
 
-    .transaction-item {
+    .txn-count {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--accent-light);
+      color: var(--accent);
+      border-radius: 6px;
+      padding: 4px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .txn-card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 14px 18px;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 12px;
+      box-shadow: var(--shadow);
     }
 
-    .txn-from { font-weight: 600; color: var(--red); }
-    .txn-arrow { color: var(--text-muted); font-size: 18px; }
-    .txn-to { font-weight: 600; color: var(--green); }
+    .txn-from { font-weight: 600; color: var(--red); font-size: 14px; }
+    .txn-to { font-weight: 600; color: var(--green); font-size: 14px; }
+    .txn-arrow {
+      color: var(--text3);
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+    }
+
     .txn-amount {
-      font-family: 'JetBrains Mono', monospace;
-      font-weight: 600;
       margin-left: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 15px;
+      font-weight: 600;
       color: var(--text);
     }
 
-    /* ---- Empty states ---- */
-    .empty-state {
-      text-align: center;
-      padding: 48px 0;
-      color: var(--text-muted);
+    /* ══════════════════════════════════════════════
+       DASHBOARD TAB
+    ══════════════════════════════════════════════ */
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
     }
 
-    .empty-state .emoji { font-size: 36px; margin-bottom: 12px; }
-    .empty-state p { font-size: 14px; }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
 
-    /* ---- Modal ---- */
+    .stat-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.5px;
+    }
+
+    .stat-value.accent { color: var(--accent); }
+    .stat-sub { font-size: 12px; color: var(--text2); margin-top: 3px; }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 700px) { .charts-grid { grid-template-columns: 1fr; } }
+
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .chart-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text2);
+      margin-bottom: 14px;
+    }
+
+    .chart-wrap { position: relative; height: 200px; }
+
+    /* ══════════════════════════════════════════════
+       ACTIVITY TAB
+    ══════════════════════════════════════════════ */
+
+    .activity-item {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    .activity-item::before {
+      content: '';
+      position: absolute;
+      left: 17px;
+      top: 32px;
+      bottom: -16px;
+      width: 1px;
+      background: var(--border);
+    }
+
+    .activity-item:last-child::before { display: none; }
+
+    .activity-dot {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+      border: 2px solid var(--surface);
+      background: var(--bg2);
+      position: relative;
+      z-index: 1;
+    }
+
+    .activity-dot.add { background: var(--green-light); border-color: var(--green); }
+    .activity-dot.edit { background: var(--yellow-light); border-color: var(--yellow); }
+    .activity-dot.del { background: var(--red-light); border-color: var(--red); }
+    .activity-dot.member { background: var(--accent-light); border-color: var(--accent); }
+
+    .activity-body { flex: 1; padding-top: 6px; }
+
+    .activity-text {
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .activity-text strong { font-weight: 600; }
+
+    .activity-time {
+      font-size: 11px;
+      color: var(--text3);
+      margin-top: 2px;
+    }
+
+    /* ══════════════════════════════════════════════
+       MODAL
+    ══════════════════════════════════════════════ */
+
     .modal-overlay {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.6);
-      z-index: 100;
+      background: rgba(0,0,0,0.4);
+      z-index: 200;
       align-items: center;
       justify-content: center;
+      padding: 20px;
+      backdrop-filter: blur(2px);
     }
 
     .modal-overlay.open { display: flex; }
@@ -548,195 +1067,283 @@
     .modal {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: var(--radius);
+      border-radius: var(--radius-lg);
       padding: 24px;
-      min-width: 340px;
-      max-width: 90vw;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
     }
 
-    .modal h3 { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
+    .modal h3 {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: var(--text);
+    }
 
     .modal-input {
       width: 100%;
-      background: var(--bg);
+      padding: 10px 14px;
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
-      padding: 10px 14px;
+      background: var(--bg2);
       color: var(--text);
-      font-family: inherit;
       font-size: 14px;
       outline: none;
       margin-bottom: 14px;
+      transition: border-color var(--transition);
     }
 
     .modal-input:focus { border-color: var(--accent); }
 
-    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+    .modal-footer {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
 
     .btn-primary {
+      padding: 9px 20px;
       background: var(--accent);
-      border: none;
       color: #fff;
-      padding: 9px 22px;
+      border: none;
       border-radius: var(--radius-sm);
-      font-family: inherit;
       font-size: 14px;
       font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s;
+      transition: background var(--transition);
     }
 
     .btn-primary:hover { background: var(--accent-hover); }
 
     .btn-secondary {
+      padding: 9px 16px;
       background: none;
       border: 1px solid var(--border);
-      color: var(--text-muted);
-      padding: 9px 18px;
       border-radius: var(--radius-sm);
-      font-family: inherit;
+      color: var(--text2);
       font-size: 14px;
-      cursor: pointer;
+      transition: border-color var(--transition);
     }
 
-    .btn-secondary:hover { border-color: var(--text-muted); }
+    .btn-secondary:hover { border-color: var(--border2); }
 
-    /* ---- Welcome screen ---- */
-    .welcome {
-      flex: 1;
+    /* ── Empty states ── */
+    .empty-state {
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      flex-direction: column;
-      gap: 12px;
-      color: var(--text-muted);
+      padding: 48px 0;
+      gap: 8px;
+      color: var(--text2);
+      text-align: center;
     }
 
-    .welcome .big-emoji { font-size: 48px; }
-    .welcome h2 { font-size: 20px; font-weight: 600; color: var(--text); }
-    .welcome p { font-size: 14px; }
+    .empty-state .es-icon { font-size: 32px; margin-bottom: 4px; }
+    .empty-state h4 { font-size: 15px; font-weight: 600; color: var(--text); }
+    .empty-state p { font-size: 13px; }
 
-    /* ---- Toast ---- */
+    /* ── Toast ── */
     .toast {
       position: fixed;
-      bottom: 24px;
-      right: 24px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
+      bottom: 20px;
+      right: 20px;
+      padding: 11px 18px;
       border-radius: var(--radius);
-      padding: 12px 20px;
-      font-size: 14px;
+      font-size: 13px;
+      font-weight: 500;
       z-index: 999;
       opacity: 0;
-      transform: translateY(10px);
-      transition: opacity 0.2s, transform 0.2s;
+      transform: translateY(8px);
+      transition: opacity 0.25s, transform 0.25s;
       pointer-events: none;
+      max-width: 320px;
+      box-shadow: var(--shadow-md);
     }
 
     .toast.show { opacity: 1; transform: translateY(0); }
-    .toast.error { border-color: var(--red); color: var(--red); }
-    .toast.success { border-color: var(--green); color: var(--green); }
+    .toast.success { background: var(--green); color: #fff; }
+    .toast.error { background: var(--red); color: #fff; }
+    .toast.info { background: var(--surface); border: 1px solid var(--border); color: var(--text); }
 
-    /* Scrollbar */
-    ::-webkit-scrollbar { width: 5px; }
+    /* ── Spinner ── */
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 10px; }
   </style>
 </head>
 <body>
 
-<!-- Sidebar -->
-<aside class="sidebar">
-  <div class="sidebar-header">
-    <div class="logo">Smart<span>Split</span></div>
+<!-- ══ LOGIN ══ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">💸 SmartSplit</div>
+    <p class="login-tagline">AI-powered expense splitting — no sign-up needed.</p>
+    <label class="login-label" for="login-name-input">What's your name?</label>
+    <input class="login-input" id="login-name-input" type="text" placeholder="e.g. Gautam" autocomplete="off" />
+    <button class="login-btn" id="login-btn">Get Started →</button>
   </div>
-  <div class="sidebar-section">
-    Groups
-    <button class="btn-icon" id="btn-new-group" title="New Group">+</button>
-  </div>
-  <div class="group-list" id="group-list"></div>
-</aside>
+</div>
 
-<!-- Main area -->
-<main class="main" id="main-area">
-  <div class="welcome" id="welcome-screen">
-    <div class="big-emoji">💸</div>
-    <h2>SmartSplit</h2>
-    <p>Select a group or create one to get started.</p>
-  </div>
-
-  <div id="group-view" style="display:none; flex:1; flex-direction:column; overflow:hidden; display:none;">
-    <div class="main-header">
-      <div class="main-header-left">
-        <div class="group-title" id="group-title"></div>
-        <div class="members-row" id="members-row"></div>
+<!-- ══ APP ══ -->
+<div id="app">
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="navbar-logo">Smart<span>Split</span></div>
+    <div class="navbar-center"></div>
+    <div class="navbar-right">
+      <button class="theme-btn" id="theme-btn" title="Toggle theme">🌙</button>
+      <div class="user-pill" id="user-pill">
+        <div class="user-avatar" id="user-avatar">G</div>
+        <span id="user-name-display">Gautam</span>
       </div>
     </div>
+  </nav>
 
-    <div class="tabs">
-      <button class="tab active" data-tab="expenses">Expenses</button>
-      <button class="tab" data-tab="settle">Settle Up</button>
-    </div>
-
-    <div class="tab-content">
-      <!-- Expenses Panel -->
-      <div class="tab-panel active" id="panel-expenses">
-        <div class="expense-input-card">
-          <div class="input-label">
-            Natural Language Input
-            <span class="badge-ai">AI Powered</span>
-          </div>
-          <div class="nl-row">
-            <input
-              type="text"
-              class="nl-input"
-              id="nl-input"
-              placeholder='e.g. "Paid 1500 for pizza, split with Rahul and Priya"'
-            />
-            <button class="btn-parse" id="btn-parse">Parse</button>
-          </div>
-          <div class="default-user-row">
-            <span>"I" / "me" refers to:</span>
-            <input type="text" id="default-user-input" placeholder="Your name" />
-          </div>
-        </div>
-
-        <div class="preview-card" id="preview-card">
-          <div class="preview-title">AI Parsed Result — Please Verify</div>
-          <div class="preview-grid" id="preview-grid"></div>
-          <div class="preview-actions">
-            <button class="btn-confirm" id="btn-confirm">Confirm &amp; Add</button>
-            <button class="btn-discard" id="btn-discard">Discard</button>
-          </div>
-        </div>
-
-        <div class="section-title">Expenses</div>
-        <div id="expense-list"></div>
+  <div class="app-body">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-title">Groups</span>
+        <button class="btn-new-group" id="btn-new-group" title="New group">+</button>
       </div>
-
-      <!-- Settle Up Panel -->
-      <div class="tab-panel" id="panel-settle">
-        <div class="settle-section">
-          <div class="section-title">Balances</div>
-          <div id="balance-list" class="balance-list"></div>
-        </div>
-        <div class="settle-section">
-          <div class="section-title">Simplified Transactions</div>
-          <div id="transaction-list"></div>
+      <div class="group-list" id="group-list">
+        <div class="empty-state" style="padding:32px 16px">
+          <div class="es-icon">📁</div>
+          <p style="font-size:12px">No groups yet</p>
         </div>
       </div>
-    </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main" id="main">
+      <div class="welcome-state" id="welcome-screen">
+        <div class="w-icon">💸</div>
+        <h2>Welcome to SmartSplit</h2>
+        <p>Create a group, add friends, and start splitting expenses with AI-powered parsing.</p>
+      </div>
+
+      <div id="group-view" style="display:none; flex-direction:column; flex:1; overflow:hidden;">
+        <!-- Group header -->
+        <div class="group-header">
+          <div class="group-header-top">
+            <div class="group-header-name" id="gh-name">Group Name</div>
+          </div>
+          <div class="members-row" id="members-row"></div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="expenses">
+            Expenses <span class="tab-badge" id="tab-expense-count">0</span>
+          </button>
+          <button class="tab-btn" data-tab="settle">Settle Up</button>
+          <button class="tab-btn" data-tab="dashboard">Dashboard</button>
+          <button class="tab-btn" data-tab="activity">Activity</button>
+        </div>
+
+        <!-- Tab content -->
+        <div class="tab-content">
+
+          <!-- ── Expenses ── -->
+          <div class="tab-panel active" id="panel-expenses">
+            <div class="input-card">
+              <div class="input-card-header">
+                Natural Language Input
+                <span class="badge-ai">✨ AI Powered</span>
+              </div>
+              <div class="nl-row">
+                <input class="nl-input" id="nl-input" type="text"
+                  placeholder='e.g. "Priya paid 1500 for dinner, split with Rahul and me"' />
+                <button class="btn-parse" id="btn-parse">
+                  <span id="parse-label">Parse</span>
+                </button>
+              </div>
+              <div class="me-row">
+                <span>"I" / "me" refers to:</span>
+                <select id="me-select"></select>
+              </div>
+            </div>
+
+            <div class="preview-card" id="preview-card">
+              <div class="preview-header">
+                <div class="preview-title">AI Parsed — Verify before adding</div>
+              </div>
+              <div class="preview-grid" id="preview-grid"></div>
+              <div class="preview-actions">
+                <button class="btn-confirm" id="btn-confirm">✓ Confirm &amp; Add</button>
+                <button class="btn-discard" id="btn-discard">Discard</button>
+              </div>
+            </div>
+
+            <div class="section-header">
+              <div class="section-label">Expenses</div>
+            </div>
+            <div id="expense-list"></div>
+          </div>
+
+          <!-- ── Settle Up ── -->
+          <div class="tab-panel" id="panel-settle">
+            <div class="settle-section">
+              <div class="section-label" style="margin-bottom:10px">Balances</div>
+              <div id="balance-list"></div>
+            </div>
+            <div class="settle-section">
+              <div class="section-label" style="margin-bottom:10px">Simplified Transactions</div>
+              <div id="txn-count-pill" style="display:none" class="txn-count">
+                ⚡ <span id="txn-count-text"></span>
+              </div>
+              <div id="transaction-list"></div>
+            </div>
+          </div>
+
+          <!-- ── Dashboard ── -->
+          <div class="tab-panel" id="panel-dashboard">
+            <div class="stats-grid" id="stats-grid"></div>
+            <div class="charts-grid">
+              <div class="chart-card">
+                <div class="chart-title">Spending by Category</div>
+                <div class="chart-wrap"><canvas id="cat-chart"></canvas></div>
+              </div>
+              <div class="chart-card">
+                <div class="chart-title">Per-Person Spending</div>
+                <div class="chart-wrap"><canvas id="person-chart"></canvas></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Activity ── -->
+          <div class="tab-panel" id="panel-activity">
+            <div id="activity-list"></div>
+          </div>
+
+        </div><!-- /tab-content -->
+      </div><!-- /group-view -->
+    </main>
   </div>
-</main>
+</div>
 
 <!-- Create Group Modal -->
 <div class="modal-overlay" id="modal-group">
   <div class="modal">
     <h3>Create New Group</h3>
-    <input type="text" class="modal-input" id="new-group-name" placeholder="e.g. Goa Trip, Flat 302" />
-    <div class="modal-actions">
+    <input class="modal-input" id="new-group-name" type="text" placeholder="e.g. Goa Trip, Flat 302" />
+    <div class="modal-footer">
       <button class="btn-secondary" id="modal-group-cancel">Cancel</button>
-      <button class="btn-primary" id="modal-group-create">Create</button>
+      <button class="btn-primary" id="modal-group-create">Create Group</button>
     </div>
   </div>
 </div>
@@ -745,10 +1352,10 @@
 <div class="modal-overlay" id="modal-member">
   <div class="modal">
     <h3>Add Member</h3>
-    <input type="text" class="modal-input" id="new-member-name" placeholder="Member name" />
-    <div class="modal-actions">
+    <input class="modal-input" id="new-member-name" type="text" placeholder="Member name" />
+    <div class="modal-footer">
       <button class="btn-secondary" id="modal-member-cancel">Cancel</button>
-      <button class="btn-primary" id="modal-member-add">Add</button>
+      <button class="btn-primary" id="modal-member-add">Add Member</button>
     </div>
   </div>
 </div>
@@ -757,413 +1364,786 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  const CATEGORY_EMOJI = {
-    food: '🍕', travel: '🚗', groceries: '🛒', utilities: '💡',
-    entertainment: '🎬', shopping: '🛍️', rent: '🏠', medical: '💊', general: '📌'
-  };
+/* ════════════════════════════════════════════════════════
+   CONSTANTS & STATE
+════════════════════════════════════════════════════════ */
+const CATEGORY_EMOJI = {
+  food:'🍕', travel:'✈️', groceries:'🛒', utilities:'💡',
+  entertainment:'🎬', shopping:'🛍️', rent:'🏠', medical:'💊', general:'📌'
+};
 
-  let state = {
-    groups: [],
-    activeGroupId: null,
-    expenses: [],
-    parsedPreview: null,
-  };
+const CATEGORY_COLORS = [
+  '#4f46e5','#10b981','#f59e0b','#ef4444','#8b5cf6',
+  '#ec4899','#14b8a6','#f97316','#6366f1'
+];
 
-  // ---- API helpers ----
+let state = {
+  user: null,           // { id, name }
+  groups: [],
+  activeGroupId: null,
+  expenses: [],
+  parsedPreview: null,
+  catChart: null,
+  personChart: null,
+};
 
-  async function api(method, path, body) {
-    const opts = { method, headers: {} };
-    if (body !== undefined) {
-      opts.headers['Content-Type'] = 'application/json';
-      opts.body = JSON.stringify(body);
-    }
-    const res = await fetch('/api' + path, opts);
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: res.statusText }));
-      throw new Error(err.detail || res.statusText);
-    }
-    if (res.status === 204) return null;
-    return res.json();
+/* ════════════════════════════════════════════════════════
+   API
+════════════════════════════════════════════════════════ */
+async function api(method, path, body) {
+  const opts = { method, headers: {} };
+  if (body !== undefined) {
+    opts.headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(body);
   }
-
-  // ---- Toast ----
-
-  let toastTimer;
-  function showToast(msg, type = '') {
-    const el = document.getElementById('toast');
-    el.textContent = msg;
-    el.className = 'toast show ' + type;
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { el.className = 'toast'; }, 3000);
+  const res = await fetch('/api' + path, opts);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || res.statusText);
   }
+  if (res.status === 204) return null;
+  return res.json();
+}
 
-  // ---- Render sidebar groups ----
+/* ════════════════════════════════════════════════════════
+   TOAST
+════════════════════════════════════════════════════════ */
+let toastTimer;
+function toast(msg, type = 'info') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.className = 'toast', 3000);
+}
 
-  function renderGroups() {
-    const list = document.getElementById('group-list');
-    if (!state.groups.length) {
-      list.innerHTML = '<div style="padding:16px 10px;font-size:13px;color:var(--text-muted)">No groups yet. Create one!</div>';
-      return;
-    }
-    list.innerHTML = state.groups.map(g => `
-      <div class="group-item ${g.id === state.activeGroupId ? 'active' : ''}" data-id="${g.id}">
-        <div class="group-avatar">${g.name[0].toUpperCase()}</div>
-        <div class="group-name">${escHtml(g.name)}</div>
-        <div class="group-count">${g.members.length}👤</div>
-        <button class="group-delete" data-id="${g.id}" title="Delete group">🗑</button>
-      </div>
-    `).join('');
-  }
+/* ════════════════════════════════════════════════════════
+   HELPERS
+════════════════════════════════════════════════════════ */
+function esc(s) {
+  return String(s ?? '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 
-  // ---- Render group view ----
+function fmt(n) {
+  return '₹' + parseFloat(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 
-  function renderGroupView() {
-    const group = state.groups.find(g => g.id === state.activeGroupId);
-    if (!group) return;
+function timeAgo(iso) {
+  const d = new Date(iso + (iso.endsWith('Z') ? '' : 'Z'));
+  const now = new Date();
+  const diff = Math.floor((now - d) / 1000);
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
+  if (diff < 172800) return 'yesterday';
+  return d.toLocaleDateString('en-IN', { day:'numeric', month:'short' });
+}
 
-    document.getElementById('welcome-screen').style.display = 'none';
-    const gv = document.getElementById('group-view');
-    gv.style.display = 'flex';
-    gv.style.flexDirection = 'column';
-    gv.style.flex = '1';
-    gv.style.overflow = 'hidden';
+function activeGroup() {
+  return state.groups.find(g => g.id === state.activeGroupId);
+}
 
-    document.getElementById('group-title').textContent = group.name;
+/* ════════════════════════════════════════════════════════
+   THEME
+════════════════════════════════════════════════════════ */
+function applyTheme(dark) {
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  document.getElementById('theme-btn').textContent = dark ? '☀️' : '🌙';
+  localStorage.setItem('ss_theme', dark ? 'dark' : 'light');
+}
 
-    // Members row
-    const row = document.getElementById('members-row');
-    row.innerHTML = group.members.map(m => `
-      <div class="member-chip">
-        ${escHtml(m)}
-        <button class="chip-del" data-member="${escHtml(m)}" title="Remove member">×</button>
-      </div>
-    `).join('') + `<button class="btn-add-member" id="btn-add-member">+ Add member</button>`;
+document.getElementById('theme-btn').addEventListener('click', () => {
+  const dark = document.documentElement.getAttribute('data-theme') !== 'dark';
+  applyTheme(dark);
+});
 
-    // Default user placeholder
-    const du = document.getElementById('default-user-input');
-    if (!du.value && group.members.length) du.placeholder = group.members[0];
+// Init theme
+applyTheme(localStorage.getItem('ss_theme') === 'dark');
 
-    renderExpenses();
-  }
+/* ════════════════════════════════════════════════════════
+   LOGIN
+════════════════════════════════════════════════════════ */
+async function login(name) {
+  try {
+    const user = await api('POST', '/auth/login', { name });
+    state.user = user;
+    localStorage.setItem('ss_user', name);
+    showApp();
+  } catch(e) { toast(e.message, 'error'); }
+}
 
-  // ---- Render expenses ----
+document.getElementById('login-btn').addEventListener('click', () => {
+  const name = document.getElementById('login-name-input').value.trim();
+  if (!name) { toast('Please enter your name', 'error'); return; }
+  login(name);
+});
 
-  function renderExpenses() {
-    const list = document.getElementById('expense-list');
-    if (!state.expenses.length) {
-      list.innerHTML = `<div class="empty-state"><div class="emoji">📭</div><p>No expenses yet. Add one above!</p></div>`;
-      return;
-    }
-    list.innerHTML = state.expenses.map(e => `
-      <div class="expense-item">
-        <div class="expense-emoji">${CATEGORY_EMOJI[e.category] || '📌'}</div>
-        <div class="expense-body">
-          <div class="expense-desc">${escHtml(e.description)}</div>
-          <div class="expense-meta">Paid by <strong>${escHtml(e.paid_by)}</strong> · Split: ${e.splits.map(s => escHtml(s.member_name)).join(', ')}</div>
-        </div>
-        <div class="expense-amount">₹${fmt(e.amount)}</div>
-        <button class="expense-del" data-id="${e.id}" title="Delete">🗑</button>
-      </div>
-    `).join('');
-  }
+document.getElementById('login-name-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('login-btn').click();
+});
 
-  // ---- Render settle up ----
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  const app = document.getElementById('app');
+  app.style.display = 'flex';
 
-  async function renderSettle() {
-    const balList = document.getElementById('balance-list');
-    const txnList = document.getElementById('transaction-list');
-
-    try {
-      const data = await api('GET', `/groups/${state.activeGroupId}/settle`);
-
-      if (!data.balances.length) {
-        balList.innerHTML = `<div class="empty-state"><div class="emoji">🎉</div><p>No expenses yet!</p></div>`;
-        txnList.innerHTML = '';
-        return;
-      }
-
-      balList.innerHTML = data.balances.map(b => {
-        const cls = b.balance > 0.005 ? 'positive' : b.balance < -0.005 ? 'negative' : 'zero';
-        const prefix = b.balance > 0.005 ? '+' : '';
-        return `
-          <div class="balance-item">
-            <span class="balance-name">${escHtml(b.name)}</span>
-            <span class="balance-amount ${cls}">${prefix}₹${fmt(Math.abs(b.balance))}</span>
-          </div>`;
-      }).join('');
-
-      if (!data.transactions.length) {
-        txnList.innerHTML = `<div class="empty-state"><div class="emoji">✅</div><p>All settled up!</p></div>`;
-      } else {
-        txnList.innerHTML = data.transactions.map(t => `
-          <div class="transaction-item">
-            <span class="txn-from">${escHtml(t.from)}</span>
-            <span class="txn-arrow">→</span>
-            <span class="txn-to">${escHtml(t.to)}</span>
-            <span class="txn-amount">₹${fmt(t.amount)}</span>
-          </div>
-        `).join('');
-      }
-    } catch(e) {
-      balList.innerHTML = `<div class="empty-state"><p style="color:var(--red)">${escHtml(e.message)}</p></div>`;
-    }
-  }
-
-  // ---- Load data ----
-
-  async function loadGroups() {
-    state.groups = await api('GET', '/groups');
-    renderGroups();
-  }
-
-  async function selectGroup(id) {
-    state.activeGroupId = id;
-    renderGroups();
-    state.expenses = await api('GET', `/groups/${id}/expenses`);
-    hidePreview();
-    renderGroupView();
-
-    // Reset tab to expenses
-    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'expenses'));
-    document.getElementById('panel-expenses').classList.add('active');
-    document.getElementById('panel-settle').classList.remove('active');
-  }
-
-  // ---- Event: tab switching ----
-
-  document.querySelectorAll('.tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-      const panel = document.getElementById('panel-' + tab.dataset.tab);
-      panel.classList.add('active');
-      if (tab.dataset.tab === 'settle') renderSettle();
-    });
-  });
-
-  // ---- Event: group list clicks ----
-
-  document.getElementById('group-list').addEventListener('click', async e => {
-    const del = e.target.closest('.group-delete');
-    if (del) {
-      e.stopPropagation();
-      const id = parseInt(del.dataset.id);
-      if (!confirm('Delete this group and all its expenses?')) return;
-      try {
-        await api('DELETE', `/groups/${id}`);
-        if (state.activeGroupId === id) {
-          state.activeGroupId = null;
-          document.getElementById('welcome-screen').style.display = 'flex';
-          document.getElementById('group-view').style.display = 'none';
-        }
-        await loadGroups();
-        showToast('Group deleted', 'success');
-      } catch(e) { showToast(e.message, 'error'); }
-      return;
-    }
-    const item = e.target.closest('.group-item');
-    if (item) selectGroup(parseInt(item.dataset.id));
-  });
-
-  // ---- Event: create group modal ----
-
-  document.getElementById('btn-new-group').addEventListener('click', () => {
-    document.getElementById('new-group-name').value = '';
-    document.getElementById('modal-group').classList.add('open');
-    setTimeout(() => document.getElementById('new-group-name').focus(), 50);
-  });
-
-  document.getElementById('modal-group-cancel').addEventListener('click', () =>
-    document.getElementById('modal-group').classList.remove('open'));
-
-  document.getElementById('modal-group-create').addEventListener('click', createGroup);
-  document.getElementById('new-group-name').addEventListener('keydown', e => { if (e.key === 'Enter') createGroup(); });
-
-  async function createGroup() {
-    const name = document.getElementById('new-group-name').value.trim();
-    if (!name) return;
-    try {
-      const g = await api('POST', '/groups', { name });
-      document.getElementById('modal-group').classList.remove('open');
-      await loadGroups();
-      selectGroup(g.id);
-      showToast('Group created!', 'success');
-    } catch(e) { showToast(e.message, 'error'); }
-  }
-
-  // ---- Event: add member modal ----
-
-  document.getElementById('main-area').addEventListener('click', e => {
-    if (e.target.id === 'btn-add-member') {
-      document.getElementById('new-member-name').value = '';
-      document.getElementById('modal-member').classList.add('open');
-      setTimeout(() => document.getElementById('new-member-name').focus(), 50);
-    }
-    // Remove member
-    const chip = e.target.closest('.chip-del');
-    if (chip) removeMember(chip.dataset.member);
-  });
-
-  document.getElementById('modal-member-cancel').addEventListener('click', () =>
-    document.getElementById('modal-member').classList.remove('open'));
-
-  document.getElementById('modal-member-add').addEventListener('click', addMember);
-  document.getElementById('new-member-name').addEventListener('keydown', e => { if (e.key === 'Enter') addMember(); });
-
-  async function addMember() {
-    const name = document.getElementById('new-member-name').value.trim();
-    if (!name) return;
-    try {
-      await api('POST', `/groups/${state.activeGroupId}/members`, { name });
-      document.getElementById('modal-member').classList.remove('open');
-      await loadGroups();
-      renderGroupView();
-      showToast(`${name} added!`, 'success');
-    } catch(e) { showToast(e.message, 'error'); }
-  }
-
-  async function removeMember(name) {
-    if (!confirm(`Remove ${name} from the group?`)) return;
-    try {
-      await api('DELETE', `/groups/${state.activeGroupId}/members/${encodeURIComponent(name)}`);
-      await loadGroups();
-      renderGroupView();
-      showToast(`${name} removed`, 'success');
-    } catch(e) { showToast(e.message, 'error'); }
-  }
-
-  // ---- Event: parse expense ----
-
-  document.getElementById('btn-parse').addEventListener('click', parseExpense);
-  document.getElementById('nl-input').addEventListener('keydown', e => { if (e.key === 'Enter') parseExpense(); });
-
-  async function parseExpense() {
-    const text = document.getElementById('nl-input').value.trim();
-    if (!text) return;
-    const group = state.groups.find(g => g.id === state.activeGroupId);
-    const defaultUser = document.getElementById('default-user-input').value.trim()
-      || (group && group.members[0]) || 'Me';
-
-    const btn = document.getElementById('btn-parse');
-    btn.disabled = true;
-    btn.textContent = 'Parsing...';
-
-    try {
-      const res = await api('POST', `/groups/${state.activeGroupId}/expenses/parse`, {
-        text, default_user: defaultUser
-      });
-      state.parsedPreview = res.parsed;
-      showPreview(res.parsed);
-    } catch(e) {
-      showToast(e.message, 'error');
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Parse';
-    }
-  }
-
-  function showPreview(parsed) {
-    const card = document.getElementById('preview-card');
-    const grid = document.getElementById('preview-grid');
-    card.style.display = 'block';
-
-    grid.innerHTML = `
-      <div class="preview-field">
-        <label>Description</label>
-        <div class="value">${escHtml(parsed.description)}</div>
-      </div>
-      <div class="preview-field">
-        <label>Amount</label>
-        <div class="value mono">₹${fmt(parsed.amount)}</div>
-      </div>
-      <div class="preview-field">
-        <label>Paid By</label>
-        <div class="value">${escHtml(parsed.paid_by)}</div>
-      </div>
-      <div class="preview-field">
-        <label>Category</label>
-        <div class="value">${CATEGORY_EMOJI[parsed.category] || '📌'} ${parsed.category}</div>
-      </div>
-      <div class="preview-field">
-        <label>Split Between (${parsed.participants.length})</label>
-        <div class="value">${parsed.participants.map(escHtml).join(', ')}</div>
-      </div>
-      <div class="preview-field">
-        <label>Each Pays</label>
-        <div class="value mono">₹${fmt(parsed.amount / parsed.participants.length)}</div>
-      </div>
-    `;
-  }
-
-  function hidePreview() {
-    document.getElementById('preview-card').style.display = 'none';
-    state.parsedPreview = null;
-  }
-
-  document.getElementById('btn-discard').addEventListener('click', () => {
-    hidePreview();
-    document.getElementById('nl-input').value = '';
-  });
-
-  document.getElementById('btn-confirm').addEventListener('click', async () => {
-    const p = state.parsedPreview;
-    if (!p) return;
-    try {
-      await api('POST', `/groups/${state.activeGroupId}/expenses/manual`, {
-        description: p.description,
-        amount: p.amount,
-        paid_by: p.paid_by,
-        participants: p.participants,
-        category: p.category,
-      });
-      state.expenses = await api('GET', `/groups/${state.activeGroupId}/expenses`);
-      hidePreview();
-      document.getElementById('nl-input').value = '';
-      renderExpenses();
-      showToast('Expense added!', 'success');
-    } catch(e) { showToast(e.message, 'error'); }
-  });
-
-  // ---- Event: delete expense ----
-
-  document.getElementById('expense-list').addEventListener('click', async e => {
-    const btn = e.target.closest('.expense-del');
-    if (!btn) return;
-    if (!confirm('Delete this expense?')) return;
-    try {
-      await api('DELETE', `/groups/${state.activeGroupId}/expenses/${btn.dataset.id}`);
-      state.expenses = await api('GET', `/groups/${state.activeGroupId}/expenses`);
-      renderExpenses();
-      showToast('Expense deleted', 'success');
-    } catch(e) { showToast(e.message, 'error'); }
-  });
-
-  // ---- Close modals on overlay click ----
-
-  document.querySelectorAll('.modal-overlay').forEach(overlay => {
-    overlay.addEventListener('click', e => {
-      if (e.target === overlay) overlay.classList.remove('open');
-    });
-  });
-
-  // ---- Helpers ----
-
-  function fmt(n) {
-    return parseFloat(n).toFixed(2);
-  }
-
-  function escHtml(str) {
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
-  }
-
-  // ---- Init ----
+  // Update navbar
+  const n = state.user.name;
+  document.getElementById('user-name-display').textContent = n;
+  document.getElementById('user-avatar').textContent = n[0].toUpperCase();
 
   loadGroups();
+}
+
+// Auto-login if returning user
+const savedUser = localStorage.getItem('ss_user');
+if (savedUser) {
+  api('GET', `/auth/me?name=${encodeURIComponent(savedUser)}`)
+    .then(user => { state.user = user; showApp(); })
+    .catch(() => { /* stay on login */ });
+}
+
+/* ════════════════════════════════════════════════════════
+   GROUPS
+════════════════════════════════════════════════════════ */
+async function loadGroups() {
+  try {
+    state.groups = await api('GET', `/groups?user=${encodeURIComponent(state.user.name)}`);
+    renderSidebar();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+function renderSidebar() {
+  const list = document.getElementById('group-list');
+  if (!state.groups.length) {
+    list.innerHTML = `<div class="empty-state" style="padding:32px 16px">
+      <div class="es-icon">📁</div><p style="font-size:12px">No groups yet</p></div>`;
+    return;
+  }
+  list.innerHTML = state.groups.map(g => `
+    <div class="group-item ${g.id === state.activeGroupId ? 'active' : ''}" data-id="${g.id}">
+      <div class="group-icon">${esc(g.name[0].toUpperCase())}</div>
+      <div class="group-item-body">
+        <div class="group-item-name">${esc(g.name)}</div>
+        <div class="group-item-meta">${g.members.length} member${g.members.length !== 1 ? 's' : ''} · ${g.expense_count} expense${g.expense_count !== 1 ? 's' : ''}</div>
+      </div>
+      <button class="group-item-del" data-del-group="${g.id}" title="Delete group">🗑</button>
+    </div>
+  `).join('');
+}
+
+document.getElementById('group-list').addEventListener('click', async e => {
+  const delBtn = e.target.closest('[data-del-group]');
+  if (delBtn) {
+    e.stopPropagation();
+    if (!confirm('Delete this group and all its data?')) return;
+    try {
+      await api('DELETE', `/groups/${delBtn.dataset.delGroup}`);
+      if (state.activeGroupId === +delBtn.dataset.delGroup) {
+        state.activeGroupId = null;
+        document.getElementById('welcome-screen').style.display = 'flex';
+        document.getElementById('group-view').style.display = 'none';
+      }
+      await loadGroups();
+      toast('Group deleted', 'success');
+    } catch(e) { toast(e.message, 'error'); }
+    return;
+  }
+  const item = e.target.closest('.group-item');
+  if (item) selectGroup(+item.dataset.id);
+});
+
+async function selectGroup(id) {
+  state.activeGroupId = id;
+  renderSidebar();
+
+  const gv = document.getElementById('group-view');
+  document.getElementById('welcome-screen').style.display = 'none';
+  gv.style.display = 'flex';
+
+  const g = activeGroup();
+  document.getElementById('gh-name').textContent = g.name;
+
+  // Reset to expenses tab
+  document.querySelectorAll('.tab-btn').forEach(t => t.classList.toggle('active', t.dataset.tab === 'expenses'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'panel-expenses'));
+
+  hidePreview();
+  document.getElementById('nl-input').value = '';
+
+  await loadExpenses();
+  renderMembers();
+}
+
+/* ════════════════════════════════════════════════════════
+   MEMBERS
+════════════════════════════════════════════════════════ */
+function renderMembers() {
+  const g = activeGroup();
+  if (!g) return;
+
+  const row = document.getElementById('members-row');
+  row.innerHTML = g.members.map(m => `
+    <div class="member-chip">
+      ${esc(m)}
+      <button class="chip-remove" data-member="${esc(m)}" title="Remove">×</button>
+    </div>
+  `).join('') + `<button class="btn-add-member" id="btn-add-member">+ Add member</button>`;
+
+  // Update "me" select
+  const sel = document.getElementById('me-select');
+  sel.innerHTML = g.members.map(m =>
+    `<option value="${esc(m)}" ${m === state.user.name ? 'selected' : ''}>${esc(m)}</option>`
+  ).join('');
+}
+
+document.getElementById('members-row').addEventListener('click', e => {
+  if (e.target.id === 'btn-add-member') {
+    openModal('modal-member');
+    return;
+  }
+  const chip = e.target.closest('.chip-remove');
+  if (chip) removeMember(chip.dataset.member);
+});
+
+async function removeMember(name) {
+  if (!confirm(`Remove ${name} from the group?`)) return;
+  try {
+    await api('DELETE', `/groups/${state.activeGroupId}/members/${encodeURIComponent(name)}`);
+    await loadGroups();
+    renderMembers();
+    toast(`${name} removed`, 'success');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+/* ════════════════════════════════════════════════════════
+   MODALS
+════════════════════════════════════════════════════════ */
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+  setTimeout(() => document.querySelector(`#${id} input`).focus(), 50);
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+document.querySelectorAll('.modal-overlay').forEach(o =>
+  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); })
+);
+
+// Group modal
+document.getElementById('btn-new-group').addEventListener('click', () => {
+  document.getElementById('new-group-name').value = '';
+  openModal('modal-group');
+});
+
+document.getElementById('modal-group-cancel').addEventListener('click', () => closeModal('modal-group'));
+document.getElementById('modal-group-create').addEventListener('click', createGroup);
+document.getElementById('new-group-name').addEventListener('keydown', e => { if (e.key === 'Enter') createGroup(); });
+
+async function createGroup() {
+  const name = document.getElementById('new-group-name').value.trim();
+  if (!name) return;
+  try {
+    const g = await api('POST', '/groups', { name, created_by: state.user.name });
+    closeModal('modal-group');
+    await loadGroups();
+    selectGroup(g.id);
+    toast('Group created!', 'success');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// Member modal
+document.getElementById('modal-member-cancel').addEventListener('click', () => closeModal('modal-member'));
+document.getElementById('modal-member-add').addEventListener('click', addMember);
+document.getElementById('new-member-name').addEventListener('keydown', e => { if (e.key === 'Enter') addMember(); });
+
+async function addMember() {
+  const name = document.getElementById('new-member-name').value.trim();
+  if (!name) return;
+  try {
+    await api('POST', `/groups/${state.activeGroupId}/members`, { name });
+    closeModal('modal-member');
+    await loadGroups();
+    renderMembers();
+    toast(`${name} added!`, 'success');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+/* ════════════════════════════════════════════════════════
+   EXPENSES
+════════════════════════════════════════════════════════ */
+async function loadExpenses() {
+  state.expenses = await api('GET', `/groups/${state.activeGroupId}/expenses`);
+  renderExpenses();
+  document.getElementById('tab-expense-count').textContent = state.expenses.length;
+}
+
+function renderExpenses() {
+  const list = document.getElementById('expense-list');
+  if (!state.expenses.length) {
+    list.innerHTML = `<div class="empty-state">
+      <div class="es-icon">📭</div>
+      <h4>No expenses yet</h4>
+      <p>Use the input above to add your first expense.</p>
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = state.expenses.map(e => {
+    const share = e.splits.length ? (e.amount / e.splits.length) : e.amount;
+    const participants = e.splits.map(s => esc(s.member_name)).join(', ');
+    return `
+      <div class="expense-card" data-expense-id="${e.id}">
+        <div class="expense-emoji">${CATEGORY_EMOJI[e.category] || '📌'}</div>
+        <div class="expense-body">
+          <div class="expense-desc">${esc(e.description)}</div>
+          <div class="expense-meta">
+            Paid by <span class="paid-by">${esc(e.paid_by)}</span>
+            · Split: ${participants}
+            · Each: <span style="font-family:'JetBrains Mono',monospace">${fmt(share)}</span>
+          </div>
+          <div class="expense-time">${timeAgo(e.created_at)}</div>
+        </div>
+        <div class="expense-right">
+          <div class="expense-amount">${fmt(e.amount)}</div>
+          <div class="expense-actions">
+            <button class="action-btn edit-btn" data-id="${e.id}" title="Edit">✏️</button>
+            <button class="action-btn del" data-del-expense="${e.id}" title="Delete">🗑</button>
+          </div>
+        </div>
+      </div>
+      <div class="expense-edit-form" id="edit-form-${e.id}">
+        <div class="edit-grid">
+          <div class="edit-field" style="grid-column:1/-1">
+            <label>Description</label>
+            <input class="edit-input" id="ef-desc-${e.id}" value="${esc(e.description)}" />
+          </div>
+          <div class="edit-field">
+            <label>Amount (₹)</label>
+            <input class="edit-input" id="ef-amt-${e.id}" type="number" value="${e.amount}" step="0.01" />
+          </div>
+          <div class="edit-field">
+            <label>Paid By</label>
+            <select class="edit-select" id="ef-payer-${e.id}">
+              ${(activeGroup()?.members || []).map(m =>
+                `<option value="${esc(m)}" ${m === e.paid_by ? 'selected' : ''}>${esc(m)}</option>`
+              ).join('')}
+            </select>
+          </div>
+          <div class="edit-field">
+            <label>Category</label>
+            <select class="edit-select" id="ef-cat-${e.id}">
+              ${Object.keys(CATEGORY_EMOJI).map(c =>
+                `<option value="${c}" ${c === e.category ? 'selected' : ''}>${CATEGORY_EMOJI[c]} ${c}</option>`
+              ).join('')}
+            </select>
+          </div>
+          <div class="edit-field">
+            <label>Split Among</label>
+            <div id="ef-participants-${e.id}" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
+              ${(activeGroup()?.members || []).map(m => {
+                const checked = e.splits.some(s => s.member_name === m);
+                return `<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer">
+                  <input type="checkbox" value="${esc(m)}" ${checked ? 'checked' : ''} /> ${esc(m)}
+                </label>`;
+              }).join('')}
+            </div>
+          </div>
+        </div>
+        <div class="edit-actions">
+          <button class="btn-save-edit" data-save-id="${e.id}">Save</button>
+          <button class="btn-cancel-edit" data-cancel-id="${e.id}">Cancel</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Expense list event delegation
+document.getElementById('expense-list').addEventListener('click', async e => {
+  // Delete
+  const delBtn = e.target.closest('[data-del-expense]');
+  if (delBtn) {
+    if (!confirm('Delete this expense?')) return;
+    try {
+      await api('DELETE',
+        `/groups/${state.activeGroupId}/expenses/${delBtn.dataset.delExpense}?user=${encodeURIComponent(state.user.name)}`
+      );
+      await loadExpenses();
+      toast('Expense deleted', 'success');
+    } catch(e) { toast(e.message, 'error'); }
+    return;
+  }
+
+  // Show edit form
+  const editBtn = e.target.closest('.edit-btn');
+  if (editBtn) {
+    const id = editBtn.dataset.id;
+    // Hide all other edit forms first
+    document.querySelectorAll('.expense-edit-form').forEach(f => f.style.display = 'none');
+    const form = document.getElementById(`edit-form-${id}`);
+    form.style.display = form.style.display === 'block' ? 'none' : 'block';
+    return;
+  }
+
+  // Cancel edit
+  const cancelBtn = e.target.closest('[data-cancel-id]');
+  if (cancelBtn) {
+    document.getElementById(`edit-form-${cancelBtn.dataset.cancelId}`).style.display = 'none';
+    return;
+  }
+
+  // Save edit
+  const saveBtn = e.target.closest('[data-save-id]');
+  if (saveBtn) {
+    const id = saveBtn.dataset.saveId;
+    const desc = document.getElementById(`ef-desc-${id}`).value.trim();
+    const amount = parseFloat(document.getElementById(`ef-amt-${id}`).value);
+    const paidBy = document.getElementById(`ef-payer-${id}`).value;
+    const category = document.getElementById(`ef-cat-${id}`).value;
+    const checked = [...document.querySelectorAll(`#ef-participants-${id} input[type=checkbox]:checked`)];
+    const participants = checked.map(c => c.value);
+
+    if (!desc) { toast('Description required', 'error'); return; }
+    if (!amount || amount <= 0) { toast('Valid amount required', 'error'); return; }
+    if (!participants.length) { toast('Select at least one participant', 'error'); return; }
+    if (!participants.includes(paidBy)) participants.unshift(paidBy);
+
+    try {
+      await api('PUT', `/groups/${state.activeGroupId}/expenses/${id}`, {
+        description: desc, amount, paid_by: paidBy, participants, category, updated_by: state.user.name
+      });
+      await loadExpenses();
+      toast('Expense updated!', 'success');
+    } catch(e) { toast(e.message, 'error'); }
+  }
+});
+
+/* ════════════════════════════════════════════════════════
+   PARSE + PREVIEW
+════════════════════════════════════════════════════════ */
+document.getElementById('btn-parse').addEventListener('click', parseExpense);
+document.getElementById('nl-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') parseExpense();
+});
+
+async function parseExpense() {
+  const text = document.getElementById('nl-input').value.trim();
+  if (!text) { toast('Please type an expense description', 'error'); return; }
+
+  const defaultUser = document.getElementById('me-select').value || state.user.name;
+  const btn = document.getElementById('btn-parse');
+  const label = document.getElementById('parse-label');
+
+  btn.disabled = true;
+  label.innerHTML = '<span class="spinner"></span>';
+
+  try {
+    const res = await api('POST', `/groups/${state.activeGroupId}/expenses/parse`, {
+      text, default_user: defaultUser
+    });
+    state.parsedPreview = res.parsed;
+    showPreview(res.parsed);
+  } catch(e) {
+    toast(e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    label.textContent = 'Parse';
+  }
+}
+
+function showPreview(p) {
+  const card = document.getElementById('preview-card');
+  card.style.display = 'block';
+
+  const perPerson = p.participants.length ? (p.amount / p.participants.length) : p.amount;
+
+  document.getElementById('preview-grid').innerHTML = `
+    <div class="preview-field">
+      <label>Description</label>
+      <div class="pf-value">${esc(p.description)}</div>
+    </div>
+    <div class="preview-field">
+      <label>Total Amount</label>
+      <div class="pf-value mono">${fmt(p.amount)}</div>
+    </div>
+    <div class="preview-field">
+      <label>Paid By</label>
+      <div class="pf-value">${esc(p.paid_by)}</div>
+    </div>
+    <div class="preview-field">
+      <label>Category</label>
+      <div class="pf-value">${CATEGORY_EMOJI[p.category] || '📌'} ${p.category}</div>
+    </div>
+    <div class="preview-field">
+      <label>Split Among (${p.participants.length})</label>
+      <div class="pf-value">${p.participants.map(esc).join(', ')}</div>
+    </div>
+    <div class="preview-field">
+      <label>Each Pays</label>
+      <div class="pf-value mono">${fmt(perPerson)}</div>
+    </div>
+  `;
+}
+
+function hidePreview() {
+  document.getElementById('preview-card').style.display = 'none';
+  state.parsedPreview = null;
+}
+
+document.getElementById('btn-discard').addEventListener('click', () => {
+  hidePreview();
+  document.getElementById('nl-input').value = '';
+});
+
+document.getElementById('btn-confirm').addEventListener('click', async () => {
+  const p = state.parsedPreview;
+  if (!p) return;
+
+  try {
+    await api('POST', `/groups/${state.activeGroupId}/expenses`, {
+      description: p.description,
+      amount: p.amount,
+      paid_by: p.paid_by,
+      participants: p.participants,
+      category: p.category,
+      created_by: state.user.name,
+    });
+    hidePreview();
+    document.getElementById('nl-input').value = '';
+    await loadExpenses();
+    toast('Expense added!', 'success');
+  } catch(e) { toast(e.message, 'error'); }
+});
+
+/* ════════════════════════════════════════════════════════
+   TABS
+════════════════════════════════════════════════════════ */
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+
+    if (btn.dataset.tab === 'settle') loadSettle();
+    if (btn.dataset.tab === 'dashboard') loadDashboard();
+    if (btn.dataset.tab === 'activity') loadActivity();
+  });
+});
+
+/* ════════════════════════════════════════════════════════
+   SETTLE UP
+════════════════════════════════════════════════════════ */
+async function loadSettle() {
+  const balList = document.getElementById('balance-list');
+  const txnList = document.getElementById('transaction-list');
+  balList.innerHTML = '<div class="empty-state" style="padding:24px"><p>Loading…</p></div>';
+  txnList.innerHTML = '';
+
+  try {
+    const data = await api('GET', `/groups/${state.activeGroupId}/settle`);
+
+    if (!data.balances.length) {
+      balList.innerHTML = `<div class="empty-state">
+        <div class="es-icon">🎉</div><h4>No expenses yet!</h4>
+        <p>Add some expenses to see who owes what.</p></div>`;
+      return;
+    }
+
+    balList.innerHTML = data.balances.map(b => {
+      const cls = b.balance > 0.005 ? 'pos' : b.balance < -0.005 ? 'neg' : 'zero';
+      const label = b.balance > 0.005 ? 'gets back' : b.balance < -0.005 ? 'owes' : 'all settled';
+      const prefix = b.balance > 0.005 ? '+' : '';
+      return `<div class="balance-card">
+        <div>
+          <div class="balance-name">${esc(b.name)}</div>
+          <div class="balance-sub">${label}</div>
+        </div>
+        <div class="balance-amount ${cls}">${prefix}${fmt(Math.abs(b.balance))}</div>
+      </div>`;
+    }).join('');
+
+    if (!data.transactions.length) {
+      document.getElementById('txn-count-pill').style.display = 'none';
+      txnList.innerHTML = `<div class="empty-state">
+        <div class="es-icon">✅</div><h4>All settled up!</h4>
+        <p>No outstanding debts.</p></div>`;
+    } else {
+      const pill = document.getElementById('txn-count-pill');
+      pill.style.display = 'inline-flex';
+      document.getElementById('txn-count-text').textContent =
+        `Only ${data.transactions.length} transaction${data.transactions.length !== 1 ? 's' : ''} needed`;
+
+      txnList.innerHTML = data.transactions.map(t => `
+        <div class="txn-card">
+          <span class="txn-from">${esc(t.from)}</span>
+          <span class="txn-arrow">→</span>
+          <span class="txn-to">${esc(t.to)}</span>
+          <span class="txn-amount">${fmt(t.amount)}</span>
+        </div>
+      `).join('');
+    }
+  } catch(e) {
+    balList.innerHTML = `<div class="empty-state"><p style="color:var(--red)">${esc(e.message)}</p></div>`;
+  }
+}
+
+/* ════════════════════════════════════════════════════════
+   DASHBOARD
+════════════════════════════════════════════════════════ */
+async function loadDashboard() {
+  try {
+    const data = await api('GET', `/groups/${state.activeGroupId}/dashboard`);
+
+    // Stats
+    const topSpender = data.person_totals[0];
+    document.getElementById('stats-grid').innerHTML = `
+      <div class="stat-card">
+        <div class="stat-label">Total Spent</div>
+        <div class="stat-value accent">${fmt(data.total_spent)}</div>
+        <div class="stat-sub">${data.expense_count} expense${data.expense_count !== 1 ? 's' : ''}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Top Category</div>
+        <div class="stat-value" style="font-size:18px">
+          ${data.category_breakdown.length
+            ? `${CATEGORY_EMOJI[data.category_breakdown.sort((a,b)=>b.amount-a.amount)[0].category] || '📌'} ${data.category_breakdown[0].category}`
+            : '—'}
+        </div>
+        <div class="stat-sub">${data.category_breakdown.length ? fmt(data.category_breakdown[0].amount) : 'No data'}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Top Spender</div>
+        <div class="stat-value" style="font-size:18px;font-family:Inter">${esc(topSpender?.name || '—')}</div>
+        <div class="stat-sub">${topSpender ? fmt(topSpender.amount) : 'No data'}</div>
+      </div>
+    `;
+
+    if (!data.expense_count) {
+      document.querySelector('.charts-grid').innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+        <div class="es-icon">📊</div><h4>No data yet</h4>
+        <p>Add expenses to see charts.</p></div>`;
+      return;
+    }
+
+    // Destroy old charts
+    if (state.catChart) { state.catChart.destroy(); state.catChart = null; }
+    if (state.personChart) { state.personChart.destroy(); state.personChart = null; }
+
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)';
+    const textColor = isDark ? '#94a3b8' : '#64748b';
+
+    // Category doughnut
+    const cats = data.category_breakdown;
+    const catCtx = document.getElementById('cat-chart').getContext('2d');
+    state.catChart = new Chart(catCtx, {
+      type: 'doughnut',
+      data: {
+        labels: cats.map(c => `${CATEGORY_EMOJI[c.category] || ''} ${c.category}`),
+        datasets: [{
+          data: cats.map(c => c.amount),
+          backgroundColor: CATEGORY_COLORS,
+          borderWidth: 2,
+          borderColor: isDark ? '#1e293b' : '#ffffff',
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'right', labels: { color: textColor, font: { size: 11 }, padding: 10 } },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${fmt(ctx.raw)}`
+            }
+          }
+        }
+      }
+    });
+
+    // Person bar
+    const people = data.person_totals;
+    const personCtx = document.getElementById('person-chart').getContext('2d');
+    state.personChart = new Chart(personCtx, {
+      type: 'bar',
+      data: {
+        labels: people.map(p => p.name),
+        datasets: [{
+          label: 'Amount Paid',
+          data: people.map(p => p.amount),
+          backgroundColor: 'rgba(79,70,229,0.75)',
+          borderRadius: 6,
+          borderSkipped: false,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: ctx => ` ${fmt(ctx.raw)}` } }
+        },
+        scales: {
+          x: { ticks: { color: textColor }, grid: { display: false } },
+          y: {
+            ticks: { color: textColor, callback: v => '₹' + v.toLocaleString('en-IN') },
+            grid: { color: gridColor }
+          }
+        }
+      }
+    });
+
+  } catch(e) {
+    document.getElementById('stats-grid').innerHTML =
+      `<p style="color:var(--red)">${esc(e.message)}</p>`;
+  }
+}
+
+/* ════════════════════════════════════════════════════════
+   ACTIVITY
+════════════════════════════════════════════════════════ */
+const ACTIVITY_META = {
+  added_expense:   { icon: '➕', cls: 'add' },
+  edited_expense:  { icon: '✏️', cls: 'edit' },
+  deleted_expense: { icon: '🗑', cls: 'del' },
+  added_member:    { icon: '👤', cls: 'member' },
+  removed_member:  { icon: '👤', cls: 'member' },
+  created_group:   { icon: '🎉', cls: 'add' },
+};
+
+async function loadActivity() {
+  const list = document.getElementById('activity-list');
+  list.innerHTML = '<div class="empty-state" style="padding:24px"><p>Loading…</p></div>';
+
+  try {
+    const items = await api('GET', `/groups/${state.activeGroupId}/activity`);
+
+    if (!items.length) {
+      list.innerHTML = `<div class="empty-state">
+        <div class="es-icon">📋</div><h4>No activity yet</h4>
+        <p>Actions will appear here.</p></div>`;
+      return;
+    }
+
+    list.innerHTML = items.map(item => {
+      const meta = ACTIVITY_META[item.action] || { icon: '📌', cls: '' };
+      return `<div class="activity-item">
+        <div class="activity-dot ${meta.cls}">${meta.icon}</div>
+        <div class="activity-body">
+          <div class="activity-text">
+            <strong>${esc(item.user_name)}</strong> — ${esc(item.details || item.action)}
+          </div>
+          <div class="activity-time">${timeAgo(item.created_at)}</div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    list.innerHTML = `<div class="empty-state"><p style="color:var(--red)">${esc(e.message)}</p></div>`;
+  }
+}
 </script>
 </body>
 </html>

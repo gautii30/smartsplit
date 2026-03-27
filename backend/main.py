@@ -1,14 +1,13 @@
 import os
-import sys
 from pathlib import Path
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
+from typing import Optional
 
-# Load .env before anything else
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent.parent / ".env")
 
@@ -17,63 +16,124 @@ from parser import parse_expense
 from splitter import calculate_balances, simplify_debts
 
 
-# --- App setup ---
+# ── App lifecycle ──────────────────────────────────────────────────────────────
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
     yield
 
-app = FastAPI(title="SmartSplit", lifespan=lifespan)
+app = FastAPI(title="SmartSplit v2", lifespan=lifespan)
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
-
-# Serve frontend static files
 app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
-
 
 @app.get("/")
 def serve_frontend():
     return FileResponse(str(FRONTEND_DIR / "index.html"))
 
 
-# --- Pydantic models ---
+# ── Request models ─────────────────────────────────────────────────────────────
+
+class LoginRequest(BaseModel):
+    name: str
 
 class CreateGroupRequest(BaseModel):
     name: str
+    created_by: str
 
 class AddMemberRequest(BaseModel):
     name: str
 
-class ParseExpenseRequest(BaseModel):
+class ParseRequest(BaseModel):
     text: str
     default_user: str = ""
 
-class ManualExpenseRequest(BaseModel):
+class SaveExpenseRequest(BaseModel):
     description: str
     amount: float
     paid_by: str
     participants: list[str]
     category: str = "general"
+    created_by: str
+
+class UpdateExpenseRequest(BaseModel):
+    description: str
+    amount: float
+    paid_by: str
+    participants: list[str]
+    category: str = "general"
+    updated_by: str = ""
 
 
-# --- Group endpoints ---
+# ── Helpers ────────────────────────────────────────────────────────────────────
 
-@app.get("/api/groups")
-def list_groups():
+def log_activity(db, group_id: int, user_name: str, action: str, details: str = ""):
+    db.execute(
+        "INSERT INTO activity_log (group_id, user_name, action, details) VALUES (?, ?, ?, ?)",
+        (group_id, user_name, action, details)
+    )
+
+
+def row_to_dict(row):
+    return dict(row) if row else None
+
+
+# ── Auth ───────────────────────────────────────────────────────────────────────
+
+@app.post("/api/auth/login")
+def login(req: LoginRequest):
+    name = req.name.strip()
+    if not name:
+        raise HTTPException(400, "Name cannot be empty")
     db = get_db()
     try:
-        groups = db.execute("SELECT * FROM groups ORDER BY created_at DESC").fetchall()
+        db.execute("INSERT OR IGNORE INTO users (name) VALUES (?)", (name,))
+        db.commit()
+        user = db.execute("SELECT * FROM users WHERE name = ?", (name,)).fetchone()
+        return row_to_dict(user)
+    finally:
+        db.close()
+
+
+@app.get("/api/auth/me")
+def get_me(name: str = Query(...)):
+    db = get_db()
+    try:
+        user = db.execute("SELECT * FROM users WHERE name = ?", (name,)).fetchone()
+        if not user:
+            raise HTTPException(404, "User not found")
+        return row_to_dict(user)
+    finally:
+        db.close()
+
+
+# ── Groups ─────────────────────────────────────────────────────────────────────
+
+@app.get("/api/groups")
+def list_groups(user: str = Query(...)):
+    db = get_db()
+    try:
+        # Groups where the user is a member OR created the group
+        rows = db.execute("""
+            SELECT DISTINCT g.* FROM groups g
+            LEFT JOIN members m ON m.group_id = g.id
+            WHERE m.name = ? OR g.created_by = ?
+            ORDER BY g.created_at DESC
+        """, (user, user)).fetchall()
+
         result = []
-        for g in groups:
+        for g in rows:
             members = db.execute(
                 "SELECT name FROM members WHERE group_id = ? ORDER BY name", (g["id"],)
             ).fetchall()
+            expense_count = db.execute(
+                "SELECT COUNT(*) as c FROM expenses WHERE group_id = ?", (g["id"],)
+            ).fetchone()["c"]
             result.append({
-                "id": g["id"],
-                "name": g["name"],
-                "created_at": g["created_at"],
+                **row_to_dict(g),
                 "members": [m["name"] for m in members],
+                "expense_count": expense_count,
             })
         return result
     finally:
@@ -87,10 +147,18 @@ def create_group(req: CreateGroupRequest):
         raise HTTPException(400, "Group name cannot be empty")
     db = get_db()
     try:
-        cursor = db.execute("INSERT INTO groups (name) VALUES (?)", (name,))
+        cur = db.execute(
+            "INSERT INTO groups (name, created_by) VALUES (?, ?)", (name, req.created_by)
+        )
+        group_id = cur.lastrowid
+        # Auto-add creator as first member
+        db.execute(
+            "INSERT OR IGNORE INTO members (group_id, name) VALUES (?, ?)",
+            (group_id, req.created_by)
+        )
+        log_activity(db, group_id, req.created_by, "created_group", f"Created group '{name}'")
         db.commit()
-        group_id = cursor.lastrowid
-        return {"id": group_id, "name": name, "members": []}
+        return {"id": group_id, "name": name, "created_by": req.created_by, "members": [req.created_by]}
     finally:
         db.close()
 
@@ -99,8 +167,8 @@ def create_group(req: CreateGroupRequest):
 def delete_group(group_id: int):
     db = get_db()
     try:
-        group = db.execute("SELECT id FROM groups WHERE id = ?", (group_id,)).fetchone()
-        if not group:
+        g = db.execute("SELECT id FROM groups WHERE id = ?", (group_id,)).fetchone()
+        if not g:
             raise HTTPException(404, "Group not found")
         db.execute("DELETE FROM groups WHERE id = ?", (group_id,))
         db.commit()
@@ -109,7 +177,7 @@ def delete_group(group_id: int):
         db.close()
 
 
-# --- Member endpoints ---
+# ── Members ────────────────────────────────────────────────────────────────────
 
 @app.post("/api/groups/{group_id}/members", status_code=201)
 def add_member(group_id: int, req: AddMemberRequest):
@@ -118,14 +186,15 @@ def add_member(group_id: int, req: AddMemberRequest):
         raise HTTPException(400, "Member name cannot be empty")
     db = get_db()
     try:
-        group = db.execute("SELECT id FROM groups WHERE id = ?", (group_id,)).fetchone()
-        if not group:
+        g = db.execute("SELECT id, name FROM groups WHERE id = ?", (group_id,)).fetchone()
+        if not g:
             raise HTTPException(404, "Group not found")
         try:
             db.execute("INSERT INTO members (group_id, name) VALUES (?, ?)", (group_id, name))
-            db.commit()
         except Exception:
-            raise HTTPException(409, f"Member '{name}' already exists in this group")
+            raise HTTPException(409, f"'{name}' is already in this group")
+        log_activity(db, group_id, name, "added_member", f"'{name}' joined the group")
+        db.commit()
         return {"name": name}
     finally:
         db.close()
@@ -135,170 +204,240 @@ def add_member(group_id: int, req: AddMemberRequest):
 def remove_member(group_id: int, member_name: str):
     db = get_db()
     try:
-        result = db.execute(
+        r = db.execute(
             "DELETE FROM members WHERE group_id = ? AND name = ?", (group_id, member_name)
         )
-        db.commit()
-        if result.rowcount == 0:
+        if r.rowcount == 0:
             raise HTTPException(404, "Member not found")
+        log_activity(db, group_id, member_name, "removed_member", f"'{member_name}' left the group")
+        db.commit()
         return {"ok": True}
     finally:
         db.close()
 
 
-# --- Expense endpoints ---
+# ── Expenses ───────────────────────────────────────────────────────────────────
+
+def _fetch_expenses(db, group_id: int):
+    expenses = db.execute(
+        "SELECT * FROM expenses WHERE group_id = ? ORDER BY created_at DESC", (group_id,)
+    ).fetchall()
+    result = []
+    for e in expenses:
+        splits = db.execute(
+            "SELECT member_name, share FROM expense_splits WHERE expense_id = ?", (e["id"],)
+        ).fetchall()
+        result.append({
+            **row_to_dict(e),
+            "splits": [{"member_name": s["member_name"], "share": s["share"]} for s in splits],
+        })
+    return result
+
 
 @app.get("/api/groups/{group_id}/expenses")
 def list_expenses(group_id: int):
     db = get_db()
     try:
-        group = db.execute("SELECT id FROM groups WHERE id = ?", (group_id,)).fetchone()
-        if not group:
+        if not db.execute("SELECT id FROM groups WHERE id = ?", (group_id,)).fetchone():
             raise HTTPException(404, "Group not found")
-
-        expenses = db.execute(
-            "SELECT * FROM expenses WHERE group_id = ? ORDER BY created_at DESC", (group_id,)
-        ).fetchall()
-
-        result = []
-        for e in expenses:
-            splits = db.execute(
-                "SELECT member_name, share FROM expense_splits WHERE expense_id = ?", (e["id"],)
-            ).fetchall()
-            result.append({
-                "id": e["id"],
-                "description": e["description"],
-                "amount": e["amount"],
-                "category": e["category"],
-                "paid_by": e["paid_by"],
-                "created_at": e["created_at"],
-                "splits": [{"member_name": s["member_name"], "share": s["share"]} for s in splits],
-            })
-        return result
+        return _fetch_expenses(db, group_id)
     finally:
         db.close()
 
 
-@app.post("/api/groups/{group_id}/expenses/parse", status_code=201)
-def parse_and_add_expense(group_id: int, req: ParseExpenseRequest):
+@app.post("/api/groups/{group_id}/expenses/parse")
+def parse_only(group_id: int, req: ParseRequest):
+    """Parse natural language — returns parsed data but does NOT save."""
     db = get_db()
     try:
-        group = db.execute("SELECT id FROM groups WHERE id = ?", (group_id,)).fetchone()
-        if not group:
+        if not db.execute("SELECT id FROM groups WHERE id = ?", (group_id,)).fetchone():
             raise HTTPException(404, "Group not found")
-
-        members = db.execute(
+        members = [r["name"] for r in db.execute(
             "SELECT name FROM members WHERE group_id = ?", (group_id,)
-        ).fetchall()
-        group_members = [m["name"] for m in members]
-
-        default_user = req.default_user.strip() or (group_members[0] if group_members else "Me")
-
-        # Parse with AI (or fallback)
-        parsed = parse_expense(req.text, default_user, group_members)
-
+        ).fetchall()]
+        default_user = req.default_user.strip() or (members[0] if members else "Me")
+        parsed = parse_expense(req.text, default_user, members)
         if parsed["amount"] <= 0:
-            raise HTTPException(400, "Could not extract a valid amount from the expense description")
-
-        # Return parsed data for preview — client calls /manual to confirm
+            raise HTTPException(400, "Could not extract a valid amount")
         return {"parsed": parsed}
-
     finally:
         db.close()
 
 
-@app.post("/api/groups/{group_id}/expenses/manual", status_code=201)
-def add_expense_manual(group_id: int, req: ManualExpenseRequest):
+@app.post("/api/groups/{group_id}/expenses", status_code=201)
+def save_expense(group_id: int, req: SaveExpenseRequest):
+    """Save a confirmed expense (after preview)."""
+    if req.amount <= 0:
+        raise HTTPException(400, "Amount must be positive")
+    if not req.participants:
+        raise HTTPException(400, "At least one participant required")
+
+    share = round(req.amount / len(req.participants), 2)
+
     db = get_db()
     try:
-        group = db.execute("SELECT id FROM groups WHERE id = ?", (group_id,)).fetchone()
-        if not group:
+        if not db.execute("SELECT id FROM groups WHERE id = ?", (group_id,)).fetchone():
             raise HTTPException(404, "Group not found")
 
-        if req.amount <= 0:
-            raise HTTPException(400, "Amount must be positive")
-        if not req.paid_by.strip():
-            raise HTTPException(400, "paid_by is required")
-        if not req.participants:
-            raise HTTPException(400, "At least one participant is required")
-
-        # Calculate equal split
-        share = round(req.amount / len(req.participants), 2)
-
-        cursor = db.execute(
-            "INSERT INTO expenses (group_id, description, amount, category, paid_by) VALUES (?, ?, ?, ?, ?)",
-            (group_id, req.description, req.amount, req.category, req.paid_by)
+        cur = db.execute(
+            """INSERT INTO expenses (group_id, description, amount, category, paid_by, created_by)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (group_id, req.description, req.amount, req.category, req.paid_by, req.created_by)
         )
-        expense_id = cursor.lastrowid
+        expense_id = cur.lastrowid
 
-        for participant in req.participants:
+        for p in req.participants:
             db.execute(
                 "INSERT INTO expense_splits (expense_id, member_name, share) VALUES (?, ?, ?)",
-                (expense_id, participant, share)
+                (expense_id, p, share)
             )
 
+        log_activity(db, group_id, req.created_by, "added_expense",
+                     f"Added '{req.description}' ₹{req.amount:,.2f} (paid by {req.paid_by})")
         db.commit()
 
-        splits = [{"member_name": p, "share": share} for p in req.participants]
-        return {
-            "id": expense_id,
-            "description": req.description,
-            "amount": req.amount,
-            "category": req.category,
-            "paid_by": req.paid_by,
-            "splits": splits,
-        }
+        splits = db.execute(
+            "SELECT member_name, share FROM expense_splits WHERE expense_id = ?", (expense_id,)
+        ).fetchall()
+        expense = db.execute("SELECT * FROM expenses WHERE id = ?", (expense_id,)).fetchone()
+        return {**row_to_dict(expense), "splits": [dict(s) for s in splits]}
+    finally:
+        db.close()
+
+
+@app.put("/api/groups/{group_id}/expenses/{expense_id}")
+def update_expense(group_id: int, expense_id: int, req: UpdateExpenseRequest):
+    if req.amount <= 0:
+        raise HTTPException(400, "Amount must be positive")
+    if not req.participants:
+        raise HTTPException(400, "At least one participant required")
+
+    share = round(req.amount / len(req.participants), 2)
+
+    db = get_db()
+    try:
+        e = db.execute(
+            "SELECT id FROM expenses WHERE id = ? AND group_id = ?", (expense_id, group_id)
+        ).fetchone()
+        if not e:
+            raise HTTPException(404, "Expense not found")
+
+        db.execute(
+            """UPDATE expenses SET description=?, amount=?, category=?, paid_by=?,
+               updated_at=datetime('now') WHERE id=?""",
+            (req.description, req.amount, req.category, req.paid_by, expense_id)
+        )
+        db.execute("DELETE FROM expense_splits WHERE expense_id = ?", (expense_id,))
+        for p in req.participants:
+            db.execute(
+                "INSERT INTO expense_splits (expense_id, member_name, share) VALUES (?, ?, ?)",
+                (expense_id, p, share)
+            )
+
+        actor = req.updated_by or req.paid_by
+        log_activity(db, group_id, actor, "edited_expense",
+                     f"Edited '{req.description}' ₹{req.amount:,.2f}")
+        db.commit()
+
+        splits = db.execute(
+            "SELECT member_name, share FROM expense_splits WHERE expense_id = ?", (expense_id,)
+        ).fetchall()
+        expense = db.execute("SELECT * FROM expenses WHERE id = ?", (expense_id,)).fetchone()
+        return {**row_to_dict(expense), "splits": [dict(s) for s in splits]}
     finally:
         db.close()
 
 
 @app.delete("/api/groups/{group_id}/expenses/{expense_id}")
-def delete_expense(group_id: int, expense_id: int):
+def delete_expense(group_id: int, expense_id: int, user: str = Query(default="")):
     db = get_db()
     try:
-        expense = db.execute(
-            "SELECT id FROM expenses WHERE id = ? AND group_id = ?", (expense_id, group_id)
+        e = db.execute(
+            "SELECT * FROM expenses WHERE id = ? AND group_id = ?", (expense_id, group_id)
         ).fetchone()
-        if not expense:
+        if not e:
             raise HTTPException(404, "Expense not found")
+        actor = user or e["created_by"]
         db.execute("DELETE FROM expenses WHERE id = ?", (expense_id,))
+        log_activity(db, group_id, actor, "deleted_expense",
+                     f"Deleted '{e['description']}' ₹{e['amount']:,.2f}")
         db.commit()
         return {"ok": True}
     finally:
         db.close()
 
 
-# --- Settlement endpoint ---
+# ── Settlement ─────────────────────────────────────────────────────────────────
 
 @app.get("/api/groups/{group_id}/settle")
-def settle_group(group_id: int):
+def settle(group_id: int):
     db = get_db()
     try:
-        group = db.execute("SELECT id FROM groups WHERE id = ?", (group_id,)).fetchone()
-        if not group:
+        if not db.execute("SELECT id FROM groups WHERE id = ?", (group_id,)).fetchone():
+            raise HTTPException(404, "Group not found")
+        expenses = _fetch_expenses(db, group_id)
+        balances = calculate_balances(expenses)
+        transactions = simplify_debts(balances)
+        return {
+            "balances": [{"name": k, "balance": v} for k, v in sorted(balances.items())],
+            "transactions": transactions,
+        }
+    finally:
+        db.close()
+
+
+# ── Activity ───────────────────────────────────────────────────────────────────
+
+@app.get("/api/groups/{group_id}/activity")
+def get_activity(group_id: int):
+    db = get_db()
+    try:
+        if not db.execute("SELECT id FROM groups WHERE id = ?", (group_id,)).fetchone():
+            raise HTTPException(404, "Group not found")
+        rows = db.execute(
+            "SELECT * FROM activity_log WHERE group_id = ? ORDER BY created_at DESC LIMIT 100",
+            (group_id,)
+        ).fetchall()
+        return [row_to_dict(r) for r in rows]
+    finally:
+        db.close()
+
+
+# ── Dashboard ──────────────────────────────────────────────────────────────────
+
+@app.get("/api/groups/{group_id}/dashboard")
+def dashboard(group_id: int):
+    db = get_db()
+    try:
+        if not db.execute("SELECT id FROM groups WHERE id = ?", (group_id,)).fetchone():
             raise HTTPException(404, "Group not found")
 
         expenses = db.execute(
             "SELECT * FROM expenses WHERE group_id = ?", (group_id,)
         ).fetchall()
 
-        expenses_with_splits = []
-        for e in expenses:
-            splits = db.execute(
-                "SELECT member_name, share FROM expense_splits WHERE expense_id = ?", (e["id"],)
-            ).fetchall()
-            expenses_with_splits.append({
-                "paid_by": e["paid_by"],
-                "amount": e["amount"],
-                "splits": [{"member_name": s["member_name"], "share": s["share"]} for s in splits],
-            })
+        total = round(sum(e["amount"] for e in expenses), 2)
 
-        balances = calculate_balances(expenses_with_splits)
-        transactions = simplify_debts(balances)
+        # Category breakdown
+        cat_totals: dict = {}
+        for e in expenses:
+            cat = e["category"] or "general"
+            cat_totals[cat] = round(cat_totals.get(cat, 0.0) + e["amount"], 2)
+
+        # Per-person spending (as payer)
+        person_totals: dict = {}
+        for e in expenses:
+            p = e["paid_by"]
+            person_totals[p] = round(person_totals.get(p, 0.0) + e["amount"], 2)
+
+        top_spender = max(person_totals, key=person_totals.get) if person_totals else None
 
         return {
-            "balances": [{"name": k, "balance": v} for k, v in sorted(balances.items())],
-            "transactions": transactions,
+            "total_spent": total,
+            "expense_count": len(expenses),
+            "category_breakdown": [{"category": k, "amount": v} for k, v in cat_totals.items()],
+            "person_totals": [{"name": k, "amount": v} for k, v in sorted(person_totals.items(), key=lambda x: -x[1])],
+            "top_spender": top_spender,
         }
     finally:
         db.close()

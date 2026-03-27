@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(pip install:*)",
-      "Bash(pytest:*)"
+      "Bash(pytest:*)",
+      "Bash(/Users/gautam/Desktop/smartsplit/.gitignore:*)"
     ]
   }
 }
