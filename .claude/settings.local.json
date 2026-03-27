@@ -3,7 +3,8 @@
     "allow": [
       "Bash(pip install:*)",
       "Bash(pytest:*)",
-      "Bash(/Users/gautam/Desktop/smartsplit/.gitignore:*)"
+      "Bash(/Users/gautam/Desktop/smartsplit/.gitignore:*)",
+      "Bash(python3:*)"
     ]
   }
 }

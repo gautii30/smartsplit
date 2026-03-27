@@ -3,7 +3,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 
 import pytest
-from splitter import calculate_balances, simplify_debts
+from splitter import calculate_balances, simplify_debts, aggregate_friend_balances
 
 
 def make_expense(paid_by, amount, participants):
@@ -99,3 +99,77 @@ class TestSimplifyDebts:
         assert len(txns) == 2
         total = sum(t["amount"] for t in txns)
         assert total == pytest.approx(66.67, abs=0.02)
+
+
+class TestAggregateFriendBalances:
+
+    def _make_group(self, group_id, group_name, paid_by, amount, participants):
+        share = round(amount / len(participants), 2)
+        return {
+            "group_id": group_id,
+            "group_name": group_name,
+            "expenses": [{
+                "paid_by": paid_by,
+                "amount": amount,
+                "splits": [{"member_name": p, "share": share} for p in participants],
+            }],
+        }
+
+    def test_single_group_friend_owes_user(self):
+        """Gautam pays 100 split with Rahul — Rahul owes Gautam 50."""
+        groups = [self._make_group(1, "Goa Trip", "Gautam", 100.0, ["Gautam", "Rahul"])]
+        result = aggregate_friend_balances("Gautam", groups)
+        assert "Rahul" in result
+        assert result["Rahul"]["net_balance"] == pytest.approx(50.0, abs=0.01)
+
+    def test_single_group_user_owes_friend(self):
+        """Priya pays 100 split with Gautam — Gautam owes Priya 50."""
+        groups = [self._make_group(1, "Goa Trip", "Priya", 100.0, ["Gautam", "Priya"])]
+        result = aggregate_friend_balances("Gautam", groups)
+        assert "Priya" in result
+        assert result["Priya"]["net_balance"] == pytest.approx(-50.0, abs=0.01)
+
+    def test_cross_group_aggregation(self):
+        """Rahul owes Gautam across two groups — balances add up."""
+        g1 = self._make_group(1, "Goa Trip", "Gautam", 100.0, ["Gautam", "Rahul"])
+        g2 = self._make_group(2, "Flat 302", "Gautam", 60.0, ["Gautam", "Rahul"])
+        result = aggregate_friend_balances("Gautam", [g1, g2])
+        # Rahul owes 50 from g1 + 30 from g2 = 80
+        assert result["Rahul"]["net_balance"] == pytest.approx(80.0, abs=0.01)
+        assert len(result["Rahul"]["groups"]) == 2
+
+    def test_cross_group_mixed_directions(self):
+        """Gautam owes Rahul in one group, Rahul owes Gautam in another — net correct."""
+        g1 = self._make_group(1, "Goa Trip", "Rahul", 200.0, ["Gautam", "Rahul"])
+        g2 = self._make_group(2, "Flat 302", "Gautam", 300.0, ["Gautam", "Rahul"])
+        result = aggregate_friend_balances("Gautam", [g1, g2])
+        # g1: Gautam owes Rahul 100, g2: Rahul owes Gautam 150 → net +50
+        assert result["Rahul"]["net_balance"] == pytest.approx(50.0, abs=0.01)
+
+    def test_no_shared_expenses_returns_empty(self):
+        """User is in groups but has no financial overlap with anyone."""
+        groups = [{"group_id": 1, "group_name": "Solo", "expenses": []}]
+        result = aggregate_friend_balances("Gautam", groups)
+        assert result == {}
+
+    def test_user_not_in_group_ignored(self):
+        """Group where user has no balance is skipped."""
+        g = self._make_group(1, "Other", "Alice", 100.0, ["Alice", "Bob"])
+        result = aggregate_friend_balances("Gautam", [g])
+        assert result == {}
+
+    def test_multiple_friends_independent(self):
+        """Balances with multiple friends are tracked independently."""
+        expense = {
+            "paid_by": "Gautam",
+            "amount": 300.0,
+            "splits": [
+                {"member_name": "Gautam", "share": 100.0},
+                {"member_name": "Rahul", "share": 100.0},
+                {"member_name": "Priya", "share": 100.0},
+            ],
+        }
+        groups = [{"group_id": 1, "group_name": "Trip", "expenses": [expense]}]
+        result = aggregate_friend_balances("Gautam", groups)
+        assert result["Rahul"]["net_balance"] == pytest.approx(100.0, abs=0.01)
+        assert result["Priya"]["net_balance"] == pytest.approx(100.0, abs=0.01)

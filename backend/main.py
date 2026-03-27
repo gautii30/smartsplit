@@ -12,8 +12,8 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent.parent / ".env")
 
 from models import get_db, init_db
-from parser import parse_expense
-from splitter import calculate_balances, simplify_debts
+from parser import parse_expense, ParseWarning
+from splitter import calculate_balances, simplify_debts, aggregate_friend_balances
 
 
 # ── App lifecycle ──────────────────────────────────────────────────────────────
@@ -64,6 +64,12 @@ class UpdateExpenseRequest(BaseModel):
     participants: list[str]
     category: str = "general"
     updated_by: str = ""
+
+class SettleRequest(BaseModel):
+    payer: str       # who sends the money
+    payee: str       # who receives it
+    amount: float
+    group_id: int
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -256,7 +262,10 @@ def parse_only(group_id: int, req: ParseRequest):
             "SELECT name FROM members WHERE group_id = ?", (group_id,)
         ).fetchall()]
         default_user = req.default_user.strip() or (members[0] if members else "Me")
-        parsed = parse_expense(req.text, default_user, members)
+        try:
+            parsed = parse_expense(req.text, default_user, members)
+        except ParseWarning as e:
+            return {"warning": str(e), "parsed": None}
         if parsed["amount"] <= 0:
             raise HTTPException(400, "Could not extract a valid amount")
         return {"parsed": parsed}
@@ -439,5 +448,103 @@ def dashboard(group_id: int):
             "person_totals": [{"name": k, "amount": v} for k, v in sorted(person_totals.items(), key=lambda x: -x[1])],
             "top_spender": top_spender,
         }
+    finally:
+        db.close()
+
+
+# ── Friends (cross-group balances) ─────────────────────────────────────────────
+
+@app.get("/api/friends/balances")
+def friends_balances(user: str = Query(...)):
+    """Return per-friend net balances aggregated across all groups the user belongs to."""
+    db = get_db()
+    try:
+        groups = db.execute("""
+            SELECT DISTINCT g.id, g.name FROM groups g
+            LEFT JOIN members m ON m.group_id = g.id
+            WHERE m.name = ? OR g.created_by = ?
+        """, (user, user)).fetchall()
+
+        groups_data = []
+        for g in groups:
+            expenses = _fetch_expenses(db, g["id"])
+            groups_data.append({
+                "group_id": g["id"],
+                "group_name": g["name"],
+                "expenses": expenses,
+            })
+
+        friend_map = aggregate_friend_balances(user, groups_data)
+
+        friends_list = []
+        total_owed_to_you = 0.0
+        total_you_owe = 0.0
+
+        for name, data in friend_map.items():
+            friends_list.append({
+                "name": name,
+                "net_balance": data["net_balance"],
+                "groups": data["groups"],
+            })
+            if data["net_balance"] > 0.005:
+                total_owed_to_you = round(total_owed_to_you + data["net_balance"], 2)
+            elif data["net_balance"] < -0.005:
+                total_you_owe = round(total_you_owe + abs(data["net_balance"]), 2)
+
+        # Sort: biggest creditor first, then biggest debtor
+        friends_list.sort(key=lambda x: -x["net_balance"])
+
+        return {
+            "total_owed_to_you": total_owed_to_you,
+            "total_you_owe": total_you_owe,
+            "net_balance": round(total_owed_to_you - total_you_owe, 2),
+            "friends": friends_list,
+        }
+    finally:
+        db.close()
+
+
+@app.post("/api/settle", status_code=201)
+def settle_between_friends(req: SettleRequest):
+    """
+    Record a settlement payment: payer → payee.
+    Creates an expense where payer fronts the full amount and payee owes all of it,
+    which correctly cancels out any existing debt between the two.
+    """
+    if req.amount <= 0:
+        raise HTTPException(400, "Amount must be positive")
+
+    db = get_db()
+    try:
+        g = db.execute("SELECT id, name FROM groups WHERE id = ?", (req.group_id,)).fetchone()
+        if not g:
+            raise HTTPException(404, "Group not found")
+
+        # Ensure both payer and payee are members of the group (add if needed)
+        for person in [req.payer, req.payee]:
+            db.execute(
+                "INSERT OR IGNORE INTO members (group_id, name) VALUES (?, ?)",
+                (req.group_id, person)
+            )
+
+        # paid_by = payer, only payee owes the share — this cancels the debt
+        desc = f"Settlement: {req.payer} → {req.payee}"
+        cur = db.execute(
+            """INSERT INTO expenses (group_id, description, amount, category, paid_by, created_by)
+               VALUES (?, ?, ?, 'settlement', ?, ?)""",
+            (req.group_id, desc, req.amount, req.payer, req.payer)
+        )
+        expense_id = cur.lastrowid
+
+        db.execute(
+            "INSERT INTO expense_splits (expense_id, member_name, share) VALUES (?, ?, ?)",
+            (expense_id, req.payee, req.amount)
+        )
+
+        log_activity(db, req.group_id, req.payer, "settled_up",
+                     f"{req.payer} paid {req.payee} ₹{req.amount:,.2f}")
+        db.commit()
+
+        return {"ok": True, "expense_id": expense_id, "group_name": g["name"]}
     finally:
         db.close()
