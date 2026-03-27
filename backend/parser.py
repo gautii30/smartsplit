@@ -35,8 +35,6 @@ CATEGORY_KEYWORDS = {
 }
 
 
-# ── Custom exception ───────────────────────────────────────────────────────────
-
 class ParseWarning(Exception):
     """
     Raised when the user explicitly names people to split with, but one or more
@@ -47,16 +45,12 @@ class ParseWarning(Exception):
     pass
 
 
-# ── Shared helpers ─────────────────────────────────────────────────────────────
-
 def _fuzzy_match(name: str, members: list) -> str | None:
     """Case-insensitive fuzzy match of a name against group members."""
     name_lower = name.lower().strip()
-    # Exact match first
     for member in members:
         if member.lower() == name_lower:
             return member
-    # Substring match (handles "rahul" → "Rahul Singh" etc.)
     for member in members:
         if name_lower in member.lower() or member.lower() in name_lower:
             return member
@@ -90,9 +84,7 @@ def _tokenise_names(clause: str, default_user: str) -> list[str]:
     Resolves "me" / "I" → default_user.
     e.g. "me and Rahul and Priya" → [default_user, "Rahul", "Priya"]
     """
-    # Resolve first-person pronouns
     clause = re.sub(r"\bme\b|\bI\b", default_user, clause, flags=re.IGNORECASE)
-    # Split on "and" or commas
     tokens = re.split(r"\s+and\s+|,\s*", clause, flags=re.IGNORECASE)
     return [t.strip() for t in tokens if t.strip()]
 
@@ -128,7 +120,7 @@ def _check_explicit_split(text: str, default_user: str, group_members: list) -> 
     """
     clause = _extract_explicit_split_clause(text)
     if clause is None:
-        return None  # no explicit instruction → caller decides default
+        return None
 
     tokens = _tokenise_names(clause, default_user)
     if not tokens:
@@ -144,10 +136,8 @@ def _check_explicit_split(text: str, default_user: str, group_members: list) -> 
             f"Members are: {members_display}."
         )
 
-    return matched  # all found — use only these people
+    return matched
 
-
-# ── Primary parser (Gemini) ────────────────────────────────────────────────────
 
 def parse_expense(text: str, default_user: str, group_members: list) -> dict:
     """
@@ -157,11 +147,8 @@ def parse_expense(text: str, default_user: str, group_members: list) -> dict:
     participants that don't exist in the group.
     Falls back to parse_expense_fallback on any other Gemini failure.
     """
-    # Validate explicit split names BEFORE the API call to avoid wasting quota
-    # and to give a precise error message while context is clear.
     if group_members:
         _check_explicit_split(text, default_user, group_members)
-        # If we reach here, either there's no explicit split OR all named people matched.
 
     api_key = os.getenv("GEMINI_API_KEY", "").strip()
     if not api_key or api_key == "your_key_here":
@@ -206,14 +193,12 @@ Return this exact JSON structure:
         response = model.generate_content(prompt)
         raw = response.text.strip()
 
-        # Strip markdown code fences
         raw = re.sub(r"^```(?:json)?\s*", "", raw)
         raw = re.sub(r"\s*```$", "", raw)
         raw = raw.strip()
 
         result = json.loads(raw)
 
-        # Validate required fields
         for field in ["description", "amount", "paid_by", "participants", "category"]:
             if field not in result:
                 raise ValueError(f"Missing field: {field}")
@@ -223,7 +208,6 @@ Return this exact JSON structure:
         if result["category"] not in VALID_CATEGORIES:
             result["category"] = _detect_category(text)
 
-        # Fuzzy-match all names against actual group members
         if group_members:
             matched = []
             for p in result["participants"]:
@@ -237,7 +221,6 @@ Return this exact JSON structure:
             if payer_match:
                 result["paid_by"] = payer_match
 
-        # Ensure payer is in participants
         if result["paid_by"] not in result["participants"]:
             result["participants"].insert(0, result["paid_by"])
 
@@ -251,8 +234,6 @@ Return this exact JSON structure:
         return parse_expense_fallback(text, default_user, group_members)
 
 
-# ── Fallback parser (regex) ────────────────────────────────────────────────────
-
 def parse_expense_fallback(text: str, default_user: str, group_members: list) -> dict:
     """
     Regex-based fallback parser.
@@ -260,13 +241,10 @@ def parse_expense_fallback(text: str, default_user: str, group_members: list) ->
     Raises ParseWarning if the text explicitly names split participants that
     cannot be found in the group members list.
     """
-    # Validate explicit split names — same check as the primary parser
     explicit_participants: list[str] | None = None
     if group_members:
         explicit_participants = _check_explicit_split(text, default_user, group_members)
-        # ParseWarning propagates up if any named person is missing.
 
-    # Extract first number as amount
     amount_match = re.search(r"\b(\d+(?:[.,]\d+)?)\b", text)
     amount = 0.0
     if amount_match:
@@ -274,7 +252,6 @@ def parse_expense_fallback(text: str, default_user: str, group_members: list) ->
 
     category = _detect_category(text)
 
-    # Try to detect named payer
     paid_by = default_user
     if group_members:
         for member in group_members:
@@ -287,7 +264,6 @@ def parse_expense_fallback(text: str, default_user: str, group_members: list) ->
                 paid_by = member
                 break
 
-    # Participants: use explicitly named people if found, otherwise all members
     if explicit_participants is not None:
         participants = explicit_participants
     else:
@@ -296,7 +272,6 @@ def parse_expense_fallback(text: str, default_user: str, group_members: list) ->
     if paid_by not in participants:
         participants.insert(0, paid_by)
 
-    # Clean description
     description = re.sub(r"\b\d+(?:[.,]\d+)?\b", "", text)
     description = re.sub(r"\s+", " ", description).strip(" ,.-")
     if not description:

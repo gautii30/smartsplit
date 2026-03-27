@@ -15,9 +15,6 @@ from models import get_db, init_db
 from parser import parse_expense, ParseWarning
 from splitter import calculate_balances, simplify_debts, aggregate_friend_balances
 
-
-# ── App lifecycle ──────────────────────────────────────────────────────────────
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
@@ -31,9 +28,6 @@ app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 @app.get("/")
 def serve_frontend():
     return FileResponse(str(FRONTEND_DIR / "index.html"))
-
-
-# ── Request models ─────────────────────────────────────────────────────────────
 
 class LoginRequest(BaseModel):
     name: str
@@ -66,13 +60,10 @@ class UpdateExpenseRequest(BaseModel):
     updated_by: str = ""
 
 class SettleRequest(BaseModel):
-    payer: str       # who sends the money
-    payee: str       # who receives it
+    payer: str
+    payee: str
     amount: float
     group_id: int
-
-
-# ── Helpers ────────────────────────────────────────────────────────────────────
 
 def log_activity(db, group_id: int, user_name: str, action: str, details: str = ""):
     db.execute(
@@ -80,12 +71,8 @@ def log_activity(db, group_id: int, user_name: str, action: str, details: str = 
         (group_id, user_name, action, details)
     )
 
-
 def row_to_dict(row):
     return dict(row) if row else None
-
-
-# ── Auth ───────────────────────────────────────────────────────────────────────
 
 @app.post("/api/auth/login")
 def login(req: LoginRequest):
@@ -101,7 +88,6 @@ def login(req: LoginRequest):
     finally:
         db.close()
 
-
 @app.get("/api/auth/me")
 def get_me(name: str = Query(...)):
     db = get_db()
@@ -113,14 +99,10 @@ def get_me(name: str = Query(...)):
     finally:
         db.close()
 
-
-# ── Groups ─────────────────────────────────────────────────────────────────────
-
 @app.get("/api/groups")
 def list_groups(user: str = Query(...)):
     db = get_db()
     try:
-        # Groups where the user is a member OR created the group
         rows = db.execute("""
             SELECT DISTINCT g.* FROM groups g
             LEFT JOIN members m ON m.group_id = g.id
@@ -145,7 +127,6 @@ def list_groups(user: str = Query(...)):
     finally:
         db.close()
 
-
 @app.post("/api/groups", status_code=201)
 def create_group(req: CreateGroupRequest):
     name = req.name.strip()
@@ -157,7 +138,6 @@ def create_group(req: CreateGroupRequest):
             "INSERT INTO groups (name, created_by) VALUES (?, ?)", (name, req.created_by)
         )
         group_id = cur.lastrowid
-        # Auto-add creator as first member
         db.execute(
             "INSERT OR IGNORE INTO members (group_id, name) VALUES (?, ?)",
             (group_id, req.created_by)
@@ -167,7 +147,6 @@ def create_group(req: CreateGroupRequest):
         return {"id": group_id, "name": name, "created_by": req.created_by, "members": [req.created_by]}
     finally:
         db.close()
-
 
 @app.delete("/api/groups/{group_id}")
 def delete_group(group_id: int):
@@ -181,9 +160,6 @@ def delete_group(group_id: int):
         return {"ok": True}
     finally:
         db.close()
-
-
-# ── Members ────────────────────────────────────────────────────────────────────
 
 @app.post("/api/groups/{group_id}/members", status_code=201)
 def add_member(group_id: int, req: AddMemberRequest):
@@ -205,7 +181,6 @@ def add_member(group_id: int, req: AddMemberRequest):
     finally:
         db.close()
 
-
 @app.delete("/api/groups/{group_id}/members/{member_name}")
 def remove_member(group_id: int, member_name: str):
     db = get_db()
@@ -220,9 +195,6 @@ def remove_member(group_id: int, member_name: str):
         return {"ok": True}
     finally:
         db.close()
-
-
-# ── Expenses ───────────────────────────────────────────────────────────────────
 
 def _fetch_expenses(db, group_id: int):
     expenses = db.execute(
@@ -239,7 +211,6 @@ def _fetch_expenses(db, group_id: int):
         })
     return result
 
-
 @app.get("/api/groups/{group_id}/expenses")
 def list_expenses(group_id: int):
     db = get_db()
@@ -249,7 +220,6 @@ def list_expenses(group_id: int):
         return _fetch_expenses(db, group_id)
     finally:
         db.close()
-
 
 @app.post("/api/groups/{group_id}/expenses/parse")
 def parse_only(group_id: int, req: ParseRequest):
@@ -271,7 +241,6 @@ def parse_only(group_id: int, req: ParseRequest):
         return {"parsed": parsed}
     finally:
         db.close()
-
 
 @app.post("/api/groups/{group_id}/expenses", status_code=201)
 def save_expense(group_id: int, req: SaveExpenseRequest):
@@ -312,7 +281,6 @@ def save_expense(group_id: int, req: SaveExpenseRequest):
         return {**row_to_dict(expense), "splits": [dict(s) for s in splits]}
     finally:
         db.close()
-
 
 @app.put("/api/groups/{group_id}/expenses/{expense_id}")
 def update_expense(group_id: int, expense_id: int, req: UpdateExpenseRequest):
@@ -356,7 +324,6 @@ def update_expense(group_id: int, expense_id: int, req: UpdateExpenseRequest):
     finally:
         db.close()
 
-
 @app.delete("/api/groups/{group_id}/expenses/{expense_id}")
 def delete_expense(group_id: int, expense_id: int, user: str = Query(default="")):
     db = get_db()
@@ -375,9 +342,6 @@ def delete_expense(group_id: int, expense_id: int, user: str = Query(default="")
     finally:
         db.close()
 
-
-# ── Settlement ─────────────────────────────────────────────────────────────────
-
 @app.get("/api/groups/{group_id}/settle")
 def settle(group_id: int):
     db = get_db()
@@ -394,9 +358,6 @@ def settle(group_id: int):
     finally:
         db.close()
 
-
-# ── Activity ───────────────────────────────────────────────────────────────────
-
 @app.get("/api/groups/{group_id}/activity")
 def get_activity(group_id: int):
     db = get_db()
@@ -411,9 +372,6 @@ def get_activity(group_id: int):
     finally:
         db.close()
 
-
-# ── Dashboard ──────────────────────────────────────────────────────────────────
-
 @app.get("/api/groups/{group_id}/dashboard")
 def dashboard(group_id: int):
     db = get_db()
@@ -427,13 +385,11 @@ def dashboard(group_id: int):
 
         total = round(sum(e["amount"] for e in expenses), 2)
 
-        # Category breakdown
         cat_totals: dict = {}
         for e in expenses:
             cat = e["category"] or "general"
             cat_totals[cat] = round(cat_totals.get(cat, 0.0) + e["amount"], 2)
 
-        # Per-person spending (as payer)
         person_totals: dict = {}
         for e in expenses:
             p = e["paid_by"]
@@ -450,9 +406,6 @@ def dashboard(group_id: int):
         }
     finally:
         db.close()
-
-
-# ── Friends (cross-group balances) ─────────────────────────────────────────────
 
 @app.get("/api/friends/balances")
 def friends_balances(user: str = Query(...)):
@@ -491,7 +444,6 @@ def friends_balances(user: str = Query(...)):
             elif data["net_balance"] < -0.005:
                 total_you_owe = round(total_you_owe + abs(data["net_balance"]), 2)
 
-        # Sort: biggest creditor first, then biggest debtor
         friends_list.sort(key=lambda x: -x["net_balance"])
 
         return {
@@ -502,7 +454,6 @@ def friends_balances(user: str = Query(...)):
         }
     finally:
         db.close()
-
 
 @app.post("/api/settle", status_code=201)
 def settle_between_friends(req: SettleRequest):
@@ -520,14 +471,12 @@ def settle_between_friends(req: SettleRequest):
         if not g:
             raise HTTPException(404, "Group not found")
 
-        # Ensure both payer and payee are members of the group (add if needed)
         for person in [req.payer, req.payee]:
             db.execute(
                 "INSERT OR IGNORE INTO members (group_id, name) VALUES (?, ?)",
                 (req.group_id, person)
             )
 
-        # paid_by = payer, only payee owes the share — this cancels the debt
         desc = f"Settlement: {req.payer} → {req.payee}"
         cur = db.execute(
             """INSERT INTO expenses (group_id, description, amount, category, paid_by, created_by)

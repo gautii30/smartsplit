@@ -8,7 +8,6 @@ calculate_balances: computes net balance per person
 simplify_debts: greedy algorithm minimizing the number of transactions
 """
 
-
 def calculate_balances(expenses):
     """
     Calculate net balance for each person across all expenses.
@@ -29,17 +28,14 @@ def calculate_balances(expenses):
         payer = expense["paid_by"]
         amount = round(float(expense["amount"]), 2)
 
-        # Payer gets credited the full amount they fronted
         balances[payer] = round(balances.get(payer, 0.0) + amount, 2)
 
-        # Each participant is debited their share
         for split in expense["splits"]:
             member = split["member_name"]
             share = round(float(split["share"]), 2)
             balances[member] = round(balances.get(member, 0.0) - share, 2)
 
     return balances
-
 
 def simplify_debts(balances):
     """
@@ -58,10 +54,10 @@ def simplify_debts(balances):
     Returns:
         list of {from, to, amount} dicts
     """
-    EPSILON = 0.005  # ignore floating-point dust
+    EPSILON = 0.005
 
-    debtors = []    # owe money (negative balance)
-    creditors = []  # are owed money (positive balance)
+    debtors = []
+    creditors = []
 
     for name, balance in balances.items():
         b = round(balance, 2)
@@ -70,7 +66,6 @@ def simplify_debts(balances):
         elif b > EPSILON:
             creditors.append([name, b])
 
-    # Sort largest first
     debtors.sort(key=lambda x: x[1], reverse=True)
     creditors.sort(key=lambda x: x[1], reverse=True)
 
@@ -92,7 +87,6 @@ def simplify_debts(balances):
             creditors.pop(0)
 
     return transactions
-
 
 def aggregate_friend_balances(user: str, groups_data: list) -> dict:
     """
@@ -120,12 +114,10 @@ def aggregate_friend_balances(user: str, groups_data: list) -> dict:
 
     Returns:
         dict mapping friend_name -> {
-            "net_balance": float,   # positive = friend owes user, negative = user owes friend
+            "net_balance": float,
             "groups": [{"group_name": str, "group_id": int, "balance": float}]
         }
     """
-    # Internal structure during accumulation:
-    # friends[name] = {"net_balance": float, "groups": {group_id: {"group_name": str, "balance": float}}}
     friends: dict = {}
 
     for group in groups_data:
@@ -137,24 +129,21 @@ def aggregate_friend_balances(user: str, groups_data: list) -> dict:
             splits = expense["splits"]
 
             if payer == user:
-                # User paid — each other participant owes the user their share
                 for split in splits:
                     friend = split["member_name"]
                     if friend == user:
-                        continue  # user doesn't owe themselves
+                        continue
                     _pairwise_add(friends, friend, group_id, group_name,
                                   +round(float(split["share"]), 2))
             else:
-                # Someone else paid — user owes the payer their own share (if present)
                 user_split = next(
                     (s for s in splits if s["member_name"] == user), None
                 )
                 if user_split is None:
-                    continue  # user not involved in this expense
+                    continue
                 _pairwise_add(friends, payer, group_id, group_name,
                               -round(float(user_split["share"]), 2))
 
-    # Convert internal per-group dicts to sorted lists for the API response
     result = {}
     for fname, data in friends.items():
         net = round(data["net_balance"], 2)
@@ -170,7 +159,6 @@ def aggregate_friend_balances(user: str, groups_data: list) -> dict:
         result[fname] = {"net_balance": net, "groups": groups_list}
 
     return result
-
 
 def _pairwise_add(friends: dict, friend: str, group_id: int, group_name: str, amount: float):
     """Accumulate a pairwise balance contribution."""
